@@ -71,18 +71,18 @@
       },
       {
         "chapterIndex": 10,
-        "currentTime": 12.793226,
+        "currentTime": 21.806399,
         "duration": 1006.468934,
         "completed": false,
-        "lastUpdated": 1772357048020
+        "lastUpdated": 1772428556531
       }
     ],
     "currentChapterIndex": 10,
-    "currentChapterTime": 12.793226,
+    "currentChapterTime": 21.806399,
     "totalCompletedChapters": 0,
-    "lastUpdated": 1772357048020,
+    "lastUpdated": 1772428556531,
     "_id": "mm78cr205g7q3c7jub",
     "createdAt": "2026-03-01T04:08:36.600Z",
-    "updatedAt": "2026-03-01T09:24:08.021Z"
+    "updatedAt": "2026-03-02T05:15:56.532Z"
   }
 ]

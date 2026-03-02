@@ -4,6 +4,7 @@ const { Order, Product, User, DigitalLibrary } = require('../models');
 const adminAuth = require('../middleware/adminAuth');
 const { protect } = require('../middleware/auth');
 const { createRazorpayOrder, verifyPaymentSignature } = require('../utils/razorpay');
+const { createCashfreeOrder, verifyCashfreePayment } = require('../utils/cashfree');
 const path = require('path');
 
 
@@ -134,6 +135,263 @@ router.post('/razorpay', protect, async (req, res) => {
         res.json(rzpOrder);
     } catch (error) {
         res.status(500).json({ message: 'Failed to create Razorpay order' });
+    }
+});
+
+// Create Cashfree Order
+router.post('/cashfree', protect, async (req, res) => {
+    try {
+        const { amount, customerName, customerPhone, customerEmail } = req.body;
+        if (!amount) return res.status(400).json({ message: 'Amount is required' });
+
+        const cfOrder = await createCashfreeOrder({
+            amount: amount,
+            customerId: req.user._id.toString(),
+            customerName: customerName || req.user.name,
+            customerPhone: customerPhone || req.user.phone || '0000000000',
+            customerEmail: customerEmail || req.user.email
+        });
+
+        res.json(cfOrder);
+    } catch (error) {
+        console.error('Cashfree API Error:', error);
+        res.status(500).json({
+            message: 'Failed to create Cashfree order',
+            error: error.response ? error.response.data : error.message
+        });
+    }
+});
+
+// Verify Cashfree Payment
+router.post('/verify-cashfree', protect, async (req, res) => {
+    try {
+        const { order_id, checkoutData, customer: directCustomer, items: directItems } = req.body;
+
+        if (!order_id) return res.status(400).json({ message: 'Order ID is required' });
+
+        // 1. Verify Payment with Cashfree
+        const payments = await verifyCashfreePayment(order_id);
+        const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS');
+
+        if (!successfulPayment) {
+            return res.status(400).json({ message: 'Payment not successful or not found' });
+        }
+
+        // 2. Fulfill Order (Reuse logic from /verify)
+        const user = await User.findOne({ email: req.user.email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        let finalItems = [];
+        let address = null;
+
+        if (checkoutData) {
+            finalItems = checkoutData.items || [];
+            if (checkoutData.selectedAddressId) {
+                address = user.savedAddresses.find(a => (a._id || a.id || '').toString() === checkoutData.selectedAddressId.toString());
+            } else if (checkoutData.address) {
+                address = checkoutData.address;
+            }
+        } else {
+            finalItems = directItems || [];
+            if (directCustomer) {
+                address = {
+                    fullName: directCustomer.name,
+                    email: directCustomer.email,
+                    phone: directCustomer.phone || user.phone || '0000000000',
+                    house: directCustomer.address || '',
+                    city: directCustomer.city || 'Unknown',
+                    pincode: directCustomer.zip || directCustomer.pincode || '000000'
+                };
+            }
+        }
+
+        if (!address) return res.status(400).json({ message: 'Shipping address missing' });
+        if (!finalItems || finalItems.length === 0) return res.status(400).json({ message: 'No items in order' });
+
+        let totalAmount = 0;
+        const orderItems = [];
+
+        for (const item of finalItems) {
+            const product = await Product.findById(item.id || item.productId);
+            if (!product) continue;
+
+            totalAmount += product.price * item.quantity;
+            orderItems.push({
+                productId: product._id,
+                title: product.title,
+                type: product.type,
+                price: product.price,
+                quantity: item.quantity
+            });
+        }
+
+        if (orderItems.length === 0) return res.status(400).json({ message: 'No valid products found in order' });
+
+        const newOrder = await Order.create({
+            orderId: 'ORD-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000),
+            userId: user._id,
+            customer: {
+                name: address.fullName || user.name,
+                email: address.email || user.email,
+                phone: address.phone || user.phone || '0000000000',
+                address: address,
+                city: address.city || '',
+                zip: address.pincode || address.zip || ''
+            },
+            items: orderItems,
+            totalAmount: Math.round(totalAmount),
+            paymentMethod: 'Cashfree',
+            paymentStatus: 'Paid',
+            status: 'Processing',
+            cashfreeOrderId: order_id,
+            timeline: [{ status: 'Paid', note: 'Payment verified via Cashfree' }]
+        });
+
+        // Handle Digital Library Fulfillment (Same as Razorpay)
+        const digitalItems = [];
+        for (const item of orderItems) {
+            if (item.type === 'EBOOK' || item.type === 'AUDIOBOOK') {
+                const product = await Product.findById(item.productId);
+                if (product) {
+                    digitalItems.push({
+                        productId: product._id,
+                        title: product.title,
+                        type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                        thumbnail: product.thumbnail,
+                        filePath: product.filePath,
+                        purchasedAt: new Date()
+                    });
+                }
+            }
+        }
+
+        if (digitalItems.length > 0) {
+            await DigitalLibrary.findOneAndUpdate(
+                { userId: user._id.toString() },
+                (lib) => {
+                    if (!lib) return { userId: user._id.toString(), items: digitalItems, updatedAt: new Date().toISOString() };
+                    if (!lib.items) lib.items = [];
+                    digitalItems.forEach(di => {
+                        if (!lib.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
+                            lib.items.push(di);
+                        }
+                    });
+                    lib.updatedAt = new Date().toISOString();
+                    return lib;
+                },
+                { upsert: true }
+            );
+            console.log(`✅ Digital items added to library for user: ${user.email}`);
+        }
+
+        // 🔔 Add Purchase Notification
+        try {
+            await User.findByIdAndUpdate(user._id, (u) => {
+                if (!u.notifications) u.notifications = [];
+                u.notifications.unshift({
+                    _id: 'purchase-cf-' + Date.now(),
+                    title: 'Purchase Successful! 🎉',
+                    message: `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
+                    type: 'Order',
+                    link: 'profile.html?tab=orders',
+                    isRead: false,
+                    createdAt: new Date().toISOString()
+                });
+                u.updatedAt = new Date().toISOString();
+                return u;
+            });
+        } catch (noteErr) {
+            console.error('Purchase notification error:', noteErr);
+        }
+
+        // 🚛 Phase 2: Create Nimbus Shipment for Physical Items
+        const physicalItems = orderItems.filter(i => i.type === 'HARDCOVER' || i.type === 'PAPERBACK');
+        if (physicalItems.length > 0) {
+            try {
+                const nimbusPostService = require('../services/nimbusPostService');
+                const { Shipment } = require('../models');
+
+                const addressString = [
+                    address.house,
+                    address.street,
+                    address.fullAddress,
+                    address.area,
+                    address.landmark
+                ].filter(Boolean).join(', ') || address.fullName || 'No address provided';
+
+                const nimbusPayload = {
+                    order_number: newOrder.orderId,
+                    consignee_name: address.fullName || user.name || 'Customer',
+                    consignee_email: address.email || user.email,
+                    consignee_phone: address.phone || user.phone || '0000000000',
+                    consignee_address: addressString,
+                    consignee_city: address.city || 'Unknown',
+                    consignee_state: address.state || 'Unknown',
+                    consignee_pincode: address.pincode || address.zip || '000000',
+                    consignee_country: 'India',
+
+                    pickup_warehouse_name: "Office",
+                    pickup_contact_name: "Abha",
+                    pickup_phone: "9123456789", // Using a valid-format placeholder
+                    pickup_address: "Jabalpur",
+                    pickup_city: "Jabalpur",
+                    pickup_state: "Madhya Pradesh",
+                    pickup_pincode: "482001",
+
+                    order_items: physicalItems.map(i => ({
+                        name: i.title,
+                        qty: i.quantity,
+                        price: i.price,
+                        sku: i.productId.toString()
+                    })),
+                    payment_type: 'prepaid',
+                    order_total: newOrder.totalAmount,
+                    weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
+                    length: 10,
+                    breadth: 10,
+                    height: 10,
+                    // Mandatory for new API versions:
+                    support_email: "sreshthi+3296@uwo24.com",
+                    support_phone: "9123456789"
+                };
+
+                console.log('📦 Auto Nimbus Shipment Payload (Cashfree):', JSON.stringify(nimbusPayload, null, 2));
+                const nimbusResult = await nimbusPostService.createShipment(nimbusPayload);
+                console.log('📄 Auto Nimbus API Result (Cashfree):', JSON.stringify(nimbusResult, null, 2));
+                if (nimbusResult.status && nimbusResult.data) {
+                    const shipInfo = nimbusResult.data;
+                    const shipment = await Shipment.create({
+                        orderId: newOrder._id.toString(),
+                        shipmentId: shipInfo.shipment_id || '',
+                        awbNumber: shipInfo.awb_number || '',
+                        courierName: shipInfo.courier_name || 'NimbusPost',
+                        shippingStatus: 'Processing',
+                        trackingLink: shipInfo.tracking_url || ''
+                    });
+
+                    newOrder.shipmentId = shipment.shipmentId;
+                    newOrder.awbNumber = shipment.awbNumber;
+                    newOrder.courierName = shipment.courierName;
+                    newOrder.trackingLink = shipment.trackingLink;
+                    newOrder.timeline.push({ status: 'Processing', note: `Shipment created automatically (AWB: ${shipment.awbNumber})` });
+                    await newOrder.save();
+                }
+            } catch (shipErr) {
+                console.error('❌ Automatic Nimbus Shipment Failed:', shipErr.message);
+                newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment system error: ' + shipErr.message });
+                await newOrder.save();
+            }
+        }
+
+        res.status(201).json({
+            success: true,
+            order: newOrder,
+            message: 'Payment verified and order placed'
+        });
+
+    } catch (error) {
+        console.error('Cashfree Verification Error:', error);
+        res.status(500).json({ message: 'Payment verification failed' });
     }
 });
 
@@ -298,9 +556,13 @@ router.post('/verify', protect, async (req, res) => {
                 const nimbusPostService = require('../services/nimbusPostService');
                 const { Shipment } = require('../models');
 
-                // Improved Name Split
-                const firstName = (address.fullName || user.name || 'Customer').split(' ')[0];
-                const lastName = (address.fullName || user.name || '').split(' ').slice(1).join(' ') || '.';
+                const addressString = [
+                    address.house,
+                    address.street,
+                    address.fullAddress,
+                    address.area,
+                    address.landmark
+                ].filter(Boolean).join(', ') || address.fullName || 'No address provided';
 
                 // Prepare Nimbus Payload (Updated to match required keys)
                 const nimbusPayload = {
@@ -308,7 +570,7 @@ router.post('/verify', protect, async (req, res) => {
                     consignee_name: address.fullName || user.name || 'Customer',
                     consignee_email: address.email || user.email,
                     consignee_phone: address.phone || user.phone || '0000000000',
-                    consignee_address: address.house || address.street || address.fullAddress || '',
+                    consignee_address: addressString,
                     consignee_city: address.city || 'Unknown',
                     consignee_state: address.state || 'Unknown',
                     consignee_pincode: address.pincode || address.zip || '000000',
@@ -317,7 +579,7 @@ router.post('/verify', protect, async (req, res) => {
                     // Warehouse / Pickup details (Required)
                     pickup_warehouse_name: "Office",
                     pickup_contact_name: "Abha",
-                    pickup_phone: "0000000000",
+                    pickup_phone: "9123456789",
                     pickup_address: "Jabalpur",
                     pickup_city: "Jabalpur",
                     pickup_state: "Madhya Pradesh",
@@ -334,7 +596,10 @@ router.post('/verify', protect, async (req, res) => {
                     weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
                     length: 10,
                     breadth: 10,
-                    height: 10
+                    height: 10,
+                    // Mandatory for new API versions:
+                    support_email: "sreshthi+3296@uwo24.com",
+                    support_phone: "9123456789"
                 };
 
                 console.log('📦 Auto Nimbus Shipment Payload:', JSON.stringify(nimbusPayload, null, 2));

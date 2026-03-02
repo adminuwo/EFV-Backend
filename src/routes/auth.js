@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 const sendEmail = require('../utils/emailService');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET || 'secret123', { expiresIn: '365d' });
@@ -139,6 +141,64 @@ router.put('/change-password', require('../middleware/auth').protect, async (req
     } catch (error) {
         console.error('Pass Update Error:', error);
         res.status(500).json({ message: 'Error updating password' });
+    }
+});
+
+// --- GOOGLE LOGIN ---
+router.post('/google', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) return res.status(400).json({ message: 'Token is required' });
+
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name, picture } = payload;
+
+        // Check if user exists
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            // Create user (Just-in-time)
+            user = await User.create({
+                name: name || 'Google User',
+                email,
+                password: await bcrypt.hash(Math.random().toString(36), 10), // Random pass
+                role: 'user',
+                googleId,
+                avatar: picture,
+                notifications: [{
+                    _id: 'welcome-google-' + Date.now(),
+                    type: 'Digital',
+                    title: `Welcome, ${name}! 🚀`,
+                    message: "You've successfully connected with Google. Explore your secure library.",
+                    isRead: false,
+                    createdAt: new Date().toISOString()
+                }]
+            });
+        } else {
+            // Update googleId if not present
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
+        }
+
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            avatar: user.avatar,
+            token: generateToken(user._id)
+        });
+
+    } catch (error) {
+        console.error('Google Auth Error:', error);
+        res.status(401).json({ message: 'Invalid Google token' });
     }
 });
 

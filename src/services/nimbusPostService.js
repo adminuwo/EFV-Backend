@@ -36,6 +36,7 @@ async function createShipment(orderData) {
 
     try {
         console.log('📦 Creating Nimbus Shipment with payload...', orderData.order_number);
+        console.log('📤 Nimbus Payload:', JSON.stringify(orderData, null, 2));
         const response = await axios.post(`${NIMBUS_BASE_URL}/shipments`, orderData, {
             headers: {
                 'Authorization': `Bearer ${cachedToken}`,
@@ -44,6 +45,10 @@ async function createShipment(orderData) {
         });
 
         console.log('📄 Nimbus API Response Status:', response.data.status);
+        if (!response.data.status) {
+            console.warn('⚠️ Nimbus API Warning Message:', response.data.message);
+            console.warn('⚠️ Nimbus API Full Data:', JSON.stringify(response.data, null, 2));
+        }
         return response.data;
     } catch (error) {
         // Handle Token Expired (401)

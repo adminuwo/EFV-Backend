@@ -109,11 +109,38 @@
     "password": "$2a$10$67lhIq7enJ/86HLxaaoTtONI3DrHT9SE7MHeK6XALvVYNhNadAa8W",
     "_id": "mlt058axclnz799ag4q",
     "createdAt": "2026-02-19T05:10:02.313Z",
-    "updatedAt": "2026-03-01T09:50:23.941Z",
+    "updatedAt": "2026-03-02T05:21:56.022Z",
     "resetPasswordOTP": null,
     "resetPasswordExpires": null,
     "resetAttempts": null,
     "notifications": [
+      {
+        "_id": "purchase-cf-1772428916022",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-916018477. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-02T05:21:56.022Z"
+      },
+      {
+        "_id": "purchase-cf-1772367884403",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-884392390. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-01T12:24:44.403Z"
+      },
+      {
+        "_id": "purchase-cf-1772367176669",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-176661865. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-01T12:12:56.669Z"
+      },
       {
         "_id": "purchase-test-1772358623941",
         "title": "Item Unlocked! 🔓",
@@ -347,5 +374,92 @@
     "_id": "mm6l2q5o8zp4snv62ro",
     "createdAt": "2026-02-28T17:16:57.709Z",
     "updatedAt": "2026-02-28T17:45:48.031Z"
+  },
+  {
+    "name": "Devansh Tantway",
+    "email": "devanshtantwaynir@gmail.com",
+    "password": "$2a$10$p2jleRVGc6YsRVwrreFWfegNcGmHsMfnDc.Bcpvfy1lcDlu77MDXW",
+    "role": "user",
+    "googleId": "116708656007035142448",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocI8Ui6FKS9g2DM0CexSi4iqdtr191Mh09Morp6fnKoghbsIjA=s96-c",
+    "notifications": [
+      {
+        "_id": "welcome-google-1772435210472",
+        "type": "Digital",
+        "title": "Welcome, Devansh Tantway! 🚀",
+        "message": "You've successfully connected with Google. Explore your secure library.",
+        "isRead": false,
+        "createdAt": "2026-03-02T07:06:50.472Z"
+      }
+    ],
+    "_id": "mm8u5t60ci0i4m2qhne",
+    "createdAt": "2026-03-02T07:06:50.472Z",
+    "updatedAt": "2026-03-02T07:06:50.472Z"
+  },
+  {
+    "name": "Gurumukh Ahuja",
+    "email": "sanjay24ahuja@gmail.com",
+    "password": "$2a$10$HV0e8x0qSJ6F/1y8yJVjjuj1saZB1T.nVzJU.ZpS3iDlAGtv/ULzO",
+    "role": "user",
+    "googleId": "103698344572104607080",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIRx923AgUIq7DUA-MjYHv9nFpQgQ92kbuzdTFQBhaCYnV-Uq92ZQ=s96-c",
+    "notifications": [
+      {
+        "_id": "purchase-test-1772436220360",
+        "title": "Item Unlocked! 🔓",
+        "message": "\"EFV™ VOL 1: ORIGIN CODE™\" has been successfully added to your library.",
+        "type": "Order",
+        "link": "profile.html?tab=library",
+        "isRead": false,
+        "createdAt": "2026-03-02T07:23:40.360Z"
+      },
+      {
+        "_id": "welcome-google-1772436194507",
+        "type": "Digital",
+        "title": "Welcome, Gurumukh Ahuja! 🚀",
+        "message": "You've successfully connected with Google. Explore your secure library.",
+        "isRead": false,
+        "createdAt": "2026-03-02T07:23:14.507Z"
+      }
+    ],
+    "_id": "mm8uqwh9wxl7mwnhyne",
+    "createdAt": "2026-03-02T07:23:14.545Z",
+    "updatedAt": "2026-03-02T07:23:40.360Z",
+    "purchasedProducts": [
+      "efv_v1_audiobook"
+    ]
+  },
+  {
+    "name": "Sreshthi Sunpal",
+    "email": "sreshthi@uwo24.com",
+    "password": "$2a$10$nNeYOrgW7lJ0HS5Zl9PB5emeIKckSAW1bjCMXk3qQpWWQyUmrQhMu",
+    "role": "user",
+    "googleId": "104614275558517401078",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL5EujkoxVkIQrDiajHhD3qmoFMWwoFNhwzJvvcNej4JWAnig=s96-c",
+    "notifications": [
+      {
+        "_id": "purchase-test-1772436324421",
+        "title": "Item Unlocked! 🔓",
+        "message": "\"EFV™ VOL 1: ORIGIN CODE™\" has been successfully added to your library.",
+        "type": "Order",
+        "link": "profile.html?tab=library",
+        "isRead": false,
+        "createdAt": "2026-03-02T07:25:24.421Z"
+      },
+      {
+        "_id": "welcome-google-1772436302964",
+        "type": "Digital",
+        "title": "Welcome, Sreshthi Sunpal! 🚀",
+        "message": "You've successfully connected with Google. Explore your secure library.",
+        "isRead": false,
+        "createdAt": "2026-03-02T07:25:02.964Z"
+      }
+    ],
+    "_id": "mm8ut853bcet79ookt",
+    "createdAt": "2026-03-02T07:25:02.967Z",
+    "updatedAt": "2026-03-02T07:25:24.421Z",
+    "purchasedProducts": [
+      "efv_v1_ebook"
+    ]
   }
 ]

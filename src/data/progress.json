@@ -59,13 +59,13 @@
     "userId": "mlt058axclnz799ag4q",
     "productId": "efv_v1_audiobook",
     "type": "AUDIOBOOK",
-    "progress": 43.533526084277874,
-    "currentTime": 12.793226,
+    "progress": 43.57246191962443,
+    "currentTime": 21.806399,
     "totalDuration": 1006.468934,
-    "lastUpdated": 1772357048045,
+    "lastUpdated": 1772428556548,
     "_id": "mlt23d3aftrj2sb1kg6",
     "createdAt": "2026-02-19T06:04:34.438Z",
-    "updatedAt": "2026-03-01T09:24:08.048Z"
+    "updatedAt": "2026-03-02T05:15:56.550Z"
   },
   {
     "userId": "mlt058axclnz799ag4q",
@@ -173,5 +173,17 @@
     "_id": "mm6m61mtonzlbwr2z9",
     "createdAt": "2026-02-28T17:47:32.165Z",
     "updatedAt": "2026-03-01T04:32:39.135Z"
+  },
+  {
+    "userId": "mlt058axclnz799ag4q",
+    "productId": "efv_v1_ebook_en",
+    "type": "EBOOK",
+    "lastPage": 1,
+    "totalPages": 196,
+    "lastUpdated": 1772432627921,
+    "_id": "mm8q7e814e6l2w50vct",
+    "createdAt": "2026-03-02T05:16:05.953Z",
+    "updatedAt": "2026-03-02T06:23:47.922Z",
+    "progress": 0.5102040816326531
   }
 ]

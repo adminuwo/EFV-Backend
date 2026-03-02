@@ -61,16 +61,15 @@ router.post('/create', adminAuth, async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Helper to extract address string from both object and string formats
-        const getAddressString = (addr) => {
-            if (typeof addr === 'string') return addr;
-            if (typeof addr === 'object' && addr !== null) {
-                return [addr.house, addr.area, addr.street, addr.landmark]
-                    .filter(Boolean)
-                    .join(', ');
-            }
-            return '';
-        };
+        // Improve address construction
+        const addressDetails = order.customer.address || {};
+        const addressString = [
+            addressDetails.house,
+            addressDetails.street,
+            addressDetails.area,
+            addressDetails.landmark,
+            addressDetails.fullAddress
+        ].filter(Boolean).join(', ') || order.customer.name || 'No address provided';
 
         // Prepare NimbusPost Payload (Updated to match required keys)
         const payload = {
@@ -78,16 +77,16 @@ router.post('/create', adminAuth, async (req, res) => {
             consignee_name: order.customer.name,
             consignee_email: order.customer.email,
             consignee_phone: order.customer.phone || '0000000000',
-            consignee_address: getAddressString(order.customer.address),
-            consignee_city: order.customer.city || order.customer.address?.city || 'Unknown',
-            consignee_state: order.customer.state || order.customer.address?.state || 'Unknown',
-            consignee_pincode: order.customer.zip || order.customer.address?.pincode || '000000',
+            consignee_address: addressString,
+            consignee_city: order.customer.city || addressDetails.city || 'Unknown',
+            consignee_state: order.customer.state || addressDetails.state || 'Unknown',
+            consignee_pincode: order.customer.zip || addressDetails.pincode || '000000',
             consignee_country: 'India',
 
             // Warehouse / Pickup details (Required)
             pickup_warehouse_name: "Office",
             pickup_contact_name: "Abha",
-            pickup_phone: "0000000000",
+            pickup_phone: "9123456789",
             pickup_address: "Jabalpur",
             pickup_city: "Jabalpur",
             pickup_state: "Madhya Pradesh",
@@ -102,9 +101,10 @@ router.post('/create', adminAuth, async (req, res) => {
             payment_type: order.paymentMethod.toLowerCase() === 'cod' ? 'cod' : 'prepaid',
             order_total: order.totalAmount,
             weight: order.items.reduce((sum, item) => sum + (item.productId?.weight || 500) * item.quantity, 0),
-            length: 10,
-            breadth: 10,
-            height: 10
+            length: 10, breadth: 10, height: 10,
+            // Mandatory for new API versions:
+            support_email: "sreshthi+3296@uwo24.com",
+            support_phone: "9123456789"
         };
 
         console.log('📦 Manual Nimbus Shipment Payload:', JSON.stringify(payload, null, 2));

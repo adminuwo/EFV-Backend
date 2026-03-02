@@ -5,7 +5,7 @@
   ],
   "result": {
     "status": false,
-    "message": "Support email and phone number on the shipping label must be provided and OTP-verified to proceed."
+    "message": "Consignee name is required\nConsignee Address is required\nConsignee City is required\nConsignee State is required\nConsignee Pincode is required\nConsignee Phone is required\nOrder Total is required\nPickup Warehouse Name is required\nPickup Contact Name is required\nPickup Address is required\nPickup City is required\nPickup State is required\nPickup Pincode is required\nPickup Phone is required\n"
   },
   "error": null
 }

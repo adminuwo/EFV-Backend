@@ -1,6 +1,6 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-const nimbusPostService = require('d:/web/efvb/src/services/nimbusPostService');
+const nimbusPostService = require('./services/nimbusPostService');
 const fs = require('fs');
 
 async function test() {
@@ -12,25 +12,31 @@ async function test() {
             order_number: "TEST" + Date.now(),
             shipping_address: {
                 first_name: "Test",
-                last_name: "Service",
+                last_name: "User",
                 email: "test@example.com",
-                phone: "9999999999",
-                address: "Test Address, Street 1, House 101",
+                phone: "9876543210",
+                address: "Test Address, Sadar",
                 city: "Jabalpur",
                 state: "Madhya Pradesh",
                 pincode: "482001",
                 country: "India"
             },
-            support_email: "admin@uwo24.com",
-            support_phone: "9999999999",
+            pickup_address: {
+                name: "Office",
+                address: "Jabalpur",
+                city: "Jabalpur",
+                state: "Madhya Pradesh",
+                pincode: "482001",
+                phone: "9876543210"
+            },
             order_items: [{
                 name: "Test Book",
                 qty: 1,
                 price: 10,
                 sku: "test-sku"
             }],
-            payment_method: "prepaid",
-            total_amount: 10,
+            payment_type: "prepaid",
+            order_total: 10,
             weight: 500,
             length: 10,
             breadth: 10,
@@ -43,7 +49,7 @@ async function test() {
     } catch (err) {
         output.error = err.message;
     }
-    fs.writeFileSync('d:/web/efvb/src/test_nimbus_result.json', JSON.stringify(output, null, 2));
+    fs.writeFileSync(path.join(__dirname, 'test_nimbus_result.json'), JSON.stringify(output, null, 2));
 }
 
 test();

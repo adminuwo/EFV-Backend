@@ -34,7 +34,7 @@
         "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
         "purchasedAt": "2026-02-19T06:03:26.552Z",
         "lastChapter": 10,
-        "lastChapterTime": 12.793226
+        "lastChapterTime": 21.806399
       },
       {
         "productId": "efv_v1_ebook",
@@ -55,7 +55,7 @@
     ],
     "_id": "mlt21wpmajenoi58ujs",
     "createdAt": "2026-02-19T06:03:26.554Z",
-    "updatedAt": "2026-03-01T09:50:23.909Z",
+    "updatedAt": "2026-03-02T05:15:56.539Z",
     "_lastStatus": "SUCCESS"
   },
   {
@@ -153,5 +153,37 @@
     "_id": "mlt8g0ae6u5jr7onwwb",
     "createdAt": "2026-02-19T09:02:22.070Z",
     "updatedAt": "2026-03-01T09:32:32.024Z"
+  },
+  {
+    "userId": "mm8uqwh9wxl7mwnhyne",
+    "items": [
+      {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-02T07:23:40.355Z"
+      }
+    ],
+    "updatedAt": "2026-03-02T07:23:40.356Z",
+    "_id": "mm8urgeco30furf26b",
+    "createdAt": "2026-03-02T07:23:40.356Z"
+  },
+  {
+    "userId": "mm8ut853bcet79ookt",
+    "items": [
+      {
+        "productId": "efv_v1_ebook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "E-Book",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/ebooks/ebook-1772357551801-955767933-efv_canon_volume_1___the_origin_code____final__28.02.26__colour.pdf",
+        "purchasedAt": "2026-03-02T07:25:24.416Z"
+      }
+    ],
+    "updatedAt": "2026-03-02T07:25:24.417Z",
+    "_id": "mm8utooxi91abs2veb",
+    "createdAt": "2026-03-02T07:25:24.417Z"
   }
 ]

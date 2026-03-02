@@ -42,6 +42,8 @@ const userSchema = new mongoose.Schema({
     resetPasswordOTP: String,
     resetPasswordExpires: Date,
     resetAttempts: { type: Number, default: 0 },
+    googleId: String,
+    avatar: String,
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -147,6 +149,8 @@ const orderSchema = new mongoose.Schema({
     razorpayOrderId: String,
     razorpayPaymentId: String,
     razorpaySignature: String,
+    cashfreeOrderId: String,
+    cashfreePaymentSessionId: String,
     invoicePath: String, // Path to generated PDF invoice
     shipmentId: String, // Shiprocket/Nimbus Shipment ID
     awbNumber: String,
