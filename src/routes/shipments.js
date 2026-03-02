@@ -61,36 +61,62 @@ router.post('/create', adminAuth, async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Improve address construction
-        const addressDetails = order.customer.address || {};
-        const addressString = [
-            addressDetails.house,
-            addressDetails.street,
-            addressDetails.area,
-            addressDetails.landmark,
-            addressDetails.fullAddress
-        ].filter(Boolean).join(', ') || order.customer.name || 'No address provided';
+        const c = order.customer || {};
+        // Deep address parsing — handles both flat and nested address structures
+        const addr = (typeof c.address === 'object' && c.address !== null) ? c.address : {};
 
-        // Prepare NimbusPost Payload (Updated to match required keys)
+        const city = c.city || addr.city || addr.district || '';
+        const state = c.state || addr.state || '';
+        const pincode = c.zip || addr.pincode || addr.zip || '';
+        const phone = c.phone || addr.phone || '';
+
+        const addressLine = [
+            addr.house, addr.street, addr.area, addr.landmark, addr.fullAddress,
+            typeof c.address === 'string' ? c.address : null
+        ].filter(Boolean).join(', ') || 'No address provided';
+
+        // --- Validate mandatory fields BEFORE hitting Nimbus ---
+        const missing = [];
+        if (!c.name) missing.push('Consignee name');
+        if (!addressLine || addressLine === 'No address provided') missing.push('Consignee Address');
+        if (!city) missing.push('Consignee City');
+        if (!state) missing.push('Consignee State');
+        if (!pincode || pincode === '000000') missing.push('Consignee Pincode');
+        if (!phone) missing.push('Consignee Phone');
+        if (!order.totalAmount) missing.push('Order Total');
+
+        if (missing.length > 0) {
+            return res.status(400).json({
+                message: `Cannot create shipment. Missing: ${missing.join(', ')}. Please check the order address.`
+            });
+        }
+
+        // Prepare NimbusPost Payload (Confirmed working format)
         const payload = {
             order_number: order.orderId,
-            consignee_name: order.customer.name,
-            consignee_email: order.customer.email,
-            consignee_phone: order.customer.phone || '0000000000',
-            consignee_address: addressString,
-            consignee_city: order.customer.city || addressDetails.city || 'Unknown',
-            consignee_state: order.customer.state || addressDetails.state || 'Unknown',
-            consignee_pincode: order.customer.zip || addressDetails.pincode || '000000',
-            consignee_country: 'India',
 
-            // Warehouse / Pickup details (Required)
-            pickup_warehouse_name: "Office",
-            pickup_contact_name: "Abha",
-            pickup_phone: "9123456789",
-            pickup_address: "Jabalpur",
-            pickup_city: "Jabalpur",
-            pickup_state: "Madhya Pradesh",
-            pickup_pincode: "482001",
+            consignee: {
+                name: c.name,
+                email: c.email || '',
+                phone: phone,
+                address: addressLine,
+                city: city,
+                state: state,
+                pincode: pincode,
+                country: 'India'
+            },
+
+            pickup: {
+                warehouse_name: "Office",
+                name: "Abha",
+                contact_name: "Abha",
+                phone: "9798780000",
+                email: "sreshthi+3296@uwo24.com",
+                address: "Badar Cantt, Jabalpur",
+                city: "Jabalpur",
+                state: "Madhya Pradesh",
+                pincode: "482001"
+            },
 
             order_items: order.items.map(item => ({
                 name: item.title,
@@ -98,18 +124,18 @@ router.post('/create', adminAuth, async (req, res) => {
                 price: item.price,
                 sku: item.productId?.title || item.title
             })),
-            payment_type: order.paymentMethod.toLowerCase() === 'cod' ? 'cod' : 'prepaid',
-            order_total: order.totalAmount,
+            payment_type: (order.paymentMethod || '').toLowerCase() === 'cod' ? 'cod' : 'prepaid',
+            order_amount: order.totalAmount,
             weight: order.items.reduce((sum, item) => sum + (item.productId?.weight || 500) * item.quantity, 0),
+            sub_weight: 0,
             length: 10, breadth: 10, height: 10,
-            // Mandatory for new API versions:
             support_email: "sreshthi+3296@uwo24.com",
-            support_phone: "9123456789"
+            support_phone: "9798780000"
         };
 
-        console.log('📦 Manual Nimbus Shipment Payload:', JSON.stringify(payload, null, 2));
+        console.log('📦 Nimbus Shipment Payload:', JSON.stringify(payload, null, 2));
         const result = await nimbusPostService.createShipment(payload);
-        console.log('📄 Manual Nimbus API Result:', JSON.stringify(result, null, 2));
+        console.log('📄 Nimbus API Result:', JSON.stringify(result, null, 2));
 
         if (result.status && result.data) {
             // Create shipment record

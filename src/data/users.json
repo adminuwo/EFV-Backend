@@ -438,6 +438,15 @@
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL5EujkoxVkIQrDiajHhD3qmoFMWwoFNhwzJvvcNej4JWAnig=s96-c",
     "notifications": [
       {
+        "_id": "purchase-cf-1772440447504",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-447494725. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-02T08:34:07.504Z"
+      },
+      {
         "_id": "purchase-test-1772436324421",
         "title": "Item Unlocked! 🔓",
         "message": "\"EFV™ VOL 1: ORIGIN CODE™\" has been successfully added to your library.",
@@ -457,9 +466,25 @@
     ],
     "_id": "mm8ut853bcet79ookt",
     "createdAt": "2026-03-02T07:25:02.967Z",
-    "updatedAt": "2026-03-02T07:25:24.421Z",
+    "updatedAt": "2026-03-02T08:34:07.504Z",
     "purchasedProducts": [
       "efv_v1_ebook"
+    ],
+    "savedAddresses": [
+      {
+        "fullName": "Sreshthi Sunpal",
+        "phone": "8982882237",
+        "pincode": "482008",
+        "state": "Madhya Pradesh",
+        "city": "Jabalpur",
+        "house": "house no. 13/b",
+        "area": "street no. 05 , sadar ",
+        "landmark": "",
+        "type": "Home",
+        "isDefault": true,
+        "fullAddress": "house no. 13/b, street no. 05 , sadar ",
+        "_id": "addr_mm8wapfs1k0s207plte"
+      }
     ]
   }
 ]

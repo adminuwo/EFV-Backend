@@ -42,6 +42,18 @@ router.get('/profile', protect, async (req, res) => {
             }
         }
 
+        // Sort notifications: Welcome pinned to top, rest newest first
+        if (userObj.notifications) {
+            const welcomeNotes = userObj.notifications.filter(n =>
+                (n.title || '').toLowerCase().includes('welcome') || (n.message || '').toLowerCase().includes('welcome')
+            );
+            const otherNotes = userObj.notifications.filter(n =>
+                !(n.title || '').toLowerCase().includes('welcome') && !(n.message || '').toLowerCase().includes('welcome')
+            );
+            otherNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            userObj.notifications = [...welcomeNotes, ...otherNotes];
+        }
+
         res.json(userObj);
 
     } catch (error) {
@@ -173,7 +185,16 @@ router.get('/notifications', protect, async (req, res) => {
             await user.save();
         }
 
-        res.json(user.notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        // Sort: Welcome pinned to top, rest newest first
+        const notes = user.notifications;
+        const welcomeNotes = notes.filter(n =>
+            (n.title || '').toLowerCase().includes('welcome') || (n.message || '').toLowerCase().includes('welcome')
+        );
+        const otherNotes = notes.filter(n =>
+            !(n.title || '').toLowerCase().includes('welcome') && !(n.message || '').toLowerCase().includes('welcome')
+        );
+        otherNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        res.json([...welcomeNotes, ...otherNotes]);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching notifications' });
     }

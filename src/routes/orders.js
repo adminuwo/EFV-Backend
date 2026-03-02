@@ -144,8 +144,10 @@ router.post('/cashfree', protect, async (req, res) => {
         const { amount, customerName, customerPhone, customerEmail } = req.body;
         if (!amount) return res.status(400).json({ message: 'Amount is required' });
 
+        const roundedAmount = Number(amount).toFixed(2);
+
         const cfOrder = await createCashfreeOrder({
-            amount: amount,
+            amount: Number(roundedAmount),
             customerId: req.user._id.toString(),
             customerName: customerName || req.user.name,
             customerPhone: customerPhone || req.user.phone || '0000000000',
@@ -311,48 +313,49 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                 const nimbusPostService = require('../services/nimbusPostService');
                 const { Shipment } = require('../models');
 
-                const addressString = [
-                    address.house,
-                    address.street,
-                    address.fullAddress,
-                    address.area,
-                    address.landmark
-                ].filter(Boolean).join(', ') || address.fullName || 'No address provided';
+                const addressLine = [
+                    address.house, address.street, address.area, address.landmark, address.fullAddress
+                ].filter(Boolean).join(', ') || 'No address provided';
 
                 const nimbusPayload = {
                     order_number: newOrder.orderId,
-                    consignee_name: address.fullName || user.name || 'Customer',
-                    consignee_email: address.email || user.email,
-                    consignee_phone: address.phone || user.phone || '0000000000',
-                    consignee_address: addressString,
-                    consignee_city: address.city || 'Unknown',
-                    consignee_state: address.state || 'Unknown',
-                    consignee_pincode: address.pincode || address.zip || '000000',
-                    consignee_country: 'India',
 
-                    pickup_warehouse_name: "Office",
-                    pickup_contact_name: "Abha",
-                    pickup_phone: "9123456789", // Using a valid-format placeholder
-                    pickup_address: "Jabalpur",
-                    pickup_city: "Jabalpur",
-                    pickup_state: "Madhya Pradesh",
-                    pickup_pincode: "482001",
+                    consignee: {
+                        name: address.fullName || user.name || 'Customer',
+                        email: address.email || user.email,
+                        phone: address.phone || user.phone || '0000000000',
+                        address: addressLine,
+                        city: address.city || '',
+                        state: address.state || '',
+                        pincode: address.pincode || address.zip || '',
+                        country: 'India'
+                    },
+
+                    pickup: {
+                        warehouse_name: "Office",
+                        name: "Abha",
+                        contact_name: "Abha",
+                        phone: "9798780000",
+                        email: "sreshthi+3296@uwo24.com",
+                        address: "Badar Cantt, Jabalpur",
+                        city: "Jabalpur",
+                        state: "Madhya Pradesh",
+                        pincode: "482001"
+                    },
 
                     order_items: physicalItems.map(i => ({
                         name: i.title,
                         qty: i.quantity,
                         price: i.price,
-                        sku: i.productId.toString()
+                        sku: i.title
                     })),
                     payment_type: 'prepaid',
-                    order_total: newOrder.totalAmount,
+                    order_amount: newOrder.totalAmount,
                     weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
-                    length: 10,
-                    breadth: 10,
-                    height: 10,
-                    // Mandatory for new API versions:
+                    sub_weight: 0,
+                    length: 10, breadth: 10, height: 10,
                     support_email: "sreshthi+3296@uwo24.com",
-                    support_phone: "9123456789"
+                    support_phone: "9798780000"
                 };
 
                 console.log('📦 Auto Nimbus Shipment Payload (Cashfree):', JSON.stringify(nimbusPayload, null, 2));
@@ -556,50 +559,50 @@ router.post('/verify', protect, async (req, res) => {
                 const nimbusPostService = require('../services/nimbusPostService');
                 const { Shipment } = require('../models');
 
-                const addressString = [
-                    address.house,
-                    address.street,
-                    address.fullAddress,
-                    address.area,
-                    address.landmark
-                ].filter(Boolean).join(', ') || address.fullName || 'No address provided';
+                const addressLine = [
+                    address.house, address.street, address.area, address.landmark, address.fullAddress
+                ].filter(Boolean).join(', ') || 'No address provided';
 
-                // Prepare Nimbus Payload (Updated to match required keys)
+                // Prepare Nimbus Payload (Confirmed working format)
                 const nimbusPayload = {
                     order_number: newOrder.orderId,
-                    consignee_name: address.fullName || user.name || 'Customer',
-                    consignee_email: address.email || user.email,
-                    consignee_phone: address.phone || user.phone || '0000000000',
-                    consignee_address: addressString,
-                    consignee_city: address.city || 'Unknown',
-                    consignee_state: address.state || 'Unknown',
-                    consignee_pincode: address.pincode || address.zip || '000000',
-                    consignee_country: 'India',
 
-                    // Warehouse / Pickup details (Required)
-                    pickup_warehouse_name: "Office",
-                    pickup_contact_name: "Abha",
-                    pickup_phone: "9123456789",
-                    pickup_address: "Jabalpur",
-                    pickup_city: "Jabalpur",
-                    pickup_state: "Madhya Pradesh",
-                    pickup_pincode: "482001",
+                    consignee: {
+                        name: address.fullName || user.name || 'Customer',
+                        email: address.email || user.email,
+                        phone: address.phone || user.phone || '0000000000',
+                        address: addressLine,
+                        city: address.city || '',
+                        state: address.state || '',
+                        pincode: address.pincode || address.zip || '',
+                        country: 'India'
+                    },
+
+                    pickup: {
+                        warehouse_name: "Office",
+                        name: "Abha",
+                        contact_name: "Abha",
+                        phone: "9798780000",
+                        email: "sreshthi+3296@uwo24.com",
+                        address: "Badar Cantt, Jabalpur",
+                        city: "Jabalpur",
+                        state: "Madhya Pradesh",
+                        pincode: "482001"
+                    },
 
                     order_items: physicalItems.map(i => ({
                         name: i.title,
                         qty: i.quantity,
                         price: i.price,
-                        sku: i.productId.toString()
+                        sku: i.title
                     })),
                     payment_type: 'prepaid',
-                    order_total: newOrder.totalAmount,
+                    order_amount: newOrder.totalAmount,
                     weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
-                    length: 10,
-                    breadth: 10,
-                    height: 10,
-                    // Mandatory for new API versions:
+                    sub_weight: 0,
+                    length: 10, breadth: 10, height: 10,
                     support_email: "sreshthi+3296@uwo24.com",
-                    support_phone: "9123456789"
+                    support_phone: "9798780000"
                 };
 
                 console.log('📦 Auto Nimbus Shipment Payload:', JSON.stringify(nimbusPayload, null, 2));
