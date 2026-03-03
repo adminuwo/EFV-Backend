@@ -556,11 +556,18 @@
       {
         "status": "Paid",
         "note": "Payment verified via Cashfree"
+      },
+      {
+        "status": "Processing",
+        "note": "Shipment created via NimbusPost"
       }
     ],
     "_id": "mm8xa22xzn0ebavfg5o",
     "createdAt": "2026-03-02T08:34:07.497Z",
-    "updatedAt": "2026-03-02T08:34:07.497Z"
+    "updatedAt": "2026-03-03T11:52:36.231Z",
+    "shipmentId": 78090002,
+    "awbNumber": "14227850765371",
+    "courierName": "Xpressbees"
   },
   {
     "orderId": "ORD-175063250",
@@ -794,5 +801,233 @@
     "_id": "mmaba4vyapex5qmhgxw",
     "createdAt": "2026-03-03T07:53:51.934Z",
     "updatedAt": "2026-03-03T07:53:51.934Z"
+  },
+  {
+    "orderId": "ORD-687237554",
+    "userId": "mlrnq3u492vak53seqk",
+    "customer": {
+      "name": "abha",
+      "email": "abha@uwo24.com",
+      "phone": "8982882237",
+      "address": {
+        "fullName": "abha",
+        "email": "abha@uwo24.com",
+        "phone": "8982882237",
+        "house": "",
+        "city": "jabalpur",
+        "state": "Madhya Pradesh",
+        "pincode": "482001",
+        "country": "India"
+      },
+      "city": "jabalpur",
+      "zip": "482001"
+    },
+    "items": [
+      {
+        "productId": "efv_v1_paperback_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "PAPERBACK",
+        "price": 299,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 299,
+    "discountAmount": 0,
+    "couponCode": "",
+    "partnerRef": null,
+    "paymentMethod": "Cashfree",
+    "paymentStatus": "Paid",
+    "status": "Processing",
+    "cashfreeOrderId": "order_110049423AQjOVE0A5i70zwnpDEJXd8Bll3",
+    "timeline": [
+      {
+        "status": "Paid",
+        "note": "Payment verified via Cashfree"
+      },
+      {
+        "status": "Payment Verified",
+        "note": "Auto-shipment failed: No autoship rule found."
+      }
+    ],
+    "_id": "mmafln48bw9b4g052ws",
+    "createdAt": "2026-03-03T09:54:47.240Z",
+    "updatedAt": "2026-03-03T09:54:48.664Z"
+  },
+  {
+    "orderId": "EFV-1772536505328139",
+    "userId": "mlrnq3u492vak53seqk",
+    "customer": {
+      "name": "abha",
+      "email": "abha@uwo24.com",
+      "phone": "7879171870",
+      "address": "streetb number 5, sadar cantt",
+      "city": "jabalpur",
+      "state": "Madhya Pradesh",
+      "country": "India",
+      "pincode": "482001"
+    },
+    "items": [
+      {
+        "productId": "efv_v1_hardcover",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "HARDCOVER",
+        "price": 1,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 80,
+    "shippingCharges": 42.48,
+    "codCharges": 36.602399999999996,
+    "discountAmount": 0,
+    "paymentMethod": "COD",
+    "paymentStatus": "Pending",
+    "status": "Processing",
+    "couponCode": "",
+    "partnerRef": null,
+    "timeline": [
+      {
+        "status": "Order Placed",
+        "note": "Order placed via Cash on Delivery"
+      }
+    ],
+    "_id": "mmaigxdnco4gim56635",
+    "createdAt": "2026-03-03T11:15:06.107Z",
+    "updatedAt": "2026-03-03T11:15:06.107Z"
+  },
+  {
+    "orderId": "EFV-177253694243839",
+    "userId": "mlrnq3u492vak53seqk",
+    "customer": {
+      "name": "abha",
+      "email": "abha@uwo24.com",
+      "phone": "7879171870",
+      "address": "streetb number 5, sadar cantt",
+      "city": "jabalpur",
+      "state": "Madhya Pradesh",
+      "country": "India",
+      "pincode": "482001"
+    },
+    "items": [
+      {
+        "productId": "efv_v1_hardcover",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "HARDCOVER",
+        "price": 1,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 80,
+    "shippingCharges": 42.48,
+    "codCharges": 36.602399999999996,
+    "discountAmount": 0,
+    "paymentMethod": "COD",
+    "paymentStatus": "Pending",
+    "status": "Processing",
+    "couponCode": "",
+    "partnerRef": null,
+    "timeline": [
+      {
+        "status": "Order Placed",
+        "note": "Order placed via Cash on Delivery"
+      },
+      {
+        "status": "Processing",
+        "note": "Shipment created via NimbusPost"
+      }
+    ],
+    "_id": "mmaiqa3np7o5czcambm",
+    "createdAt": "2026-03-03T11:22:22.499Z",
+    "updatedAt": "2026-03-03T11:45:48.841Z",
+    "shipmentId": 78089921,
+    "awbNumber": "77712193576",
+    "courierName": "Bluedart"
+  },
+  {
+    "orderId": "EFV-1772537037463914",
+    "userId": "mlrnq3u492vak53seqk",
+    "customer": {
+      "name": "Aditi",
+      "email": "abha@uwo24.com",
+      "phone": "7694045097",
+      "address": "107 ngo, police line",
+      "city": "Jabalpur",
+      "state": "Madhya Pradesh",
+      "country": "India",
+      "pincode": "482001"
+    },
+    "items": [
+      {
+        "productId": "efv_v1_hardcover_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "HARDCOVER",
+        "price": 499,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 589,
+    "shippingCharges": 42.48,
+    "codCharges": 47.7576,
+    "discountAmount": 0,
+    "paymentMethod": "COD",
+    "paymentStatus": "Pending",
+    "status": "Processing",
+    "couponCode": "",
+    "partnerRef": null,
+    "timeline": [
+      {
+        "status": "Order Placed",
+        "note": "Order placed via Cash on Delivery"
+      }
+    ],
+    "_id": "mmaisbtwwglh0tj471m",
+    "createdAt": "2026-03-03T11:23:58.052Z",
+    "updatedAt": "2026-03-03T11:23:58.053Z"
+  },
+  {
+    "orderId": "EFV-1772540819009785",
+    "userId": "mlt3pyymild20mav7n",
+    "customer": {
+      "name": "devansh",
+      "email": "devansh@uwo24.com",
+      "phone": "7879171870",
+      "address": "streetb number 5, sadar cantt",
+      "city": "jabalpur",
+      "state": "Madhya Pradesh",
+      "country": "India",
+      "pincode": "482001"
+    },
+    "items": [
+      {
+        "productId": "efv_v1_hardcover",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "HARDCOVER",
+        "price": 1,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 80,
+    "shippingCharges": 42.48,
+    "codCharges": 36.602399999999996,
+    "discountAmount": 0,
+    "paymentMethod": "COD",
+    "paymentStatus": "Pending",
+    "status": "Processing",
+    "couponCode": "",
+    "partnerRef": null,
+    "timeline": [
+      {
+        "status": "Order Placed",
+        "note": "Order placed via Cash on Delivery"
+      },
+      {
+        "status": "Shipment Created",
+        "note": "Nimbus shipment AWB: 14227850568468"
+      }
+    ],
+    "_id": "mmal1d8wohvc52dx95",
+    "createdAt": "2026-03-03T12:26:59.024Z",
+    "updatedAt": "2026-03-03T12:26:59.876Z",
+    "shipmentId": 78090417,
+    "awbNumber": "14227850568468"
   }
 ]

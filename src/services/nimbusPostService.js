@@ -26,6 +26,15 @@ async function login() {
     }
 }
 
+const fs = require('fs');
+const path = require('path');
+
+async function logNimbus(message, data) {
+    const logPath = path.join(__dirname, '..', 'data', 'nimbus_debug.log');
+    const entry = `[${new Date().toISOString()}] ${message}: ${JSON.stringify(data, null, 2)}\n`;
+    fs.appendFileSync(logPath, entry);
+}
+
 /**
  * Create a new shipment/order in NimbusPost
  */
@@ -35,8 +44,9 @@ async function createShipment(orderData) {
     }
 
     try {
-        console.log('📦 Creating Nimbus Shipment with payload...', orderData.order_number);
-        console.log('📤 Nimbus Payload:', JSON.stringify(orderData, null, 2));
+        console.log('📦 Creating Nimbus Shipment...', orderData.order_number);
+        await logNimbus('REQUEST', orderData);
+
         const response = await axios.post(`${NIMBUS_BASE_URL}/shipments`, orderData, {
             headers: {
                 'Authorization': `Bearer ${cachedToken}`,
@@ -45,12 +55,40 @@ async function createShipment(orderData) {
         });
 
         console.log('📄 Nimbus API Response Status:', response.data.status);
+        await logNimbus('RESPONSE', response.data);
+
+        // 🔄 HANDLE "No autoship rule found" - Retry with manual selection
+        if (!response.data.status && response.data.message && response.data.message.includes('autoship rule')) {
+            console.log('🔄 Nimbus: No autoship rule found. Selecting best courier manually...');
+
+            try {
+                const serviceResult = await checkServiceability({
+                    origin: orderData.pickup.pincode || "482001",
+                    destination: orderData.consignee.pincode,
+                    payment_type: orderData.payment_type || "cod",
+                    order_amount: orderData.order_amount || 100,
+                    weight: Math.round(orderData.weight * 1000) // Grams
+                });
+
+                if (serviceResult.status && serviceResult.data && serviceResult.data.length > 0) {
+                    const best = serviceResult.data[0];
+                    console.log(`✅ Auto-selected courier: ${best.name} (ID: ${best.id})`);
+                    return createShipment({ ...orderData, courier_id: best.id });
+                }
+            } catch (svcErr) {
+                console.error('❌ Manual courier selection failed:', svcErr.message);
+            }
+        }
+
         if (!response.data.status) {
-            console.warn('⚠️ Nimbus API Warning Message:', response.data.message);
-            console.warn('⚠️ Nimbus API Full Data:', JSON.stringify(response.data, null, 2));
+            console.warn('⚠️ Nimbus API Warning:', response.data.message);
         }
         return response.data;
     } catch (error) {
+        const errorData = error.response?.data || error.message;
+        console.error('❌ NimbusPost Error:', errorData);
+        await logNimbus('ERROR', errorData);
+
         // Handle Token Expired (401)
         if (error.response?.status === 401 || (error.response?.data?.message?.toLowerCase().includes('token'))) {
             console.log('🔄 Nimbus Token Expired, retrying...');
@@ -58,7 +96,6 @@ async function createShipment(orderData) {
             return createShipment(orderData);
         }
 
-        console.error('❌ NimbusPost Create Shipment Error:', error.response?.data || error.message);
         return error.response?.data || { status: false, message: error.message };
     }
 }

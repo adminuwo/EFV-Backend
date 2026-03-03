@@ -77,11 +77,41 @@
     "password": "$2a$10$fSqcc2xdtTLQwkosRflvQerBf3mZ3d4mmgxzR22755ikTB2aIRN1W",
     "_id": "mlrnq3u492vak53seqk",
     "createdAt": "2026-02-18T06:34:35.116Z",
-    "updatedAt": "2026-03-03T07:53:52.134Z",
+    "updatedAt": "2026-03-03T11:23:58.576Z",
     "resetPasswordOTP": null,
     "resetPasswordExpires": null,
     "resetAttempts": null,
     "notifications": [
+      {
+        "_id": "purchase-cod-1772537038575",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-1772537037463914 has been placed via COD. Total: ₹589.",
+        "type": "Order",
+        "link": "profile.html?tab=orders"
+      },
+      {
+        "_id": "purchase-cod-1772536943233",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-177253694243839 has been placed via COD. Total: ₹80.",
+        "type": "Order",
+        "link": "profile.html?tab=orders"
+      },
+      {
+        "_id": "purchase-cod-1772536507575",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-1772536505328139 has been placed via COD. Total: ₹80.",
+        "type": "Order",
+        "link": "profile.html?tab=orders"
+      },
+      {
+        "_id": "purchase-cf-1772531687241",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-687237554. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-03T09:54:47.241Z"
+      },
       {
         "_id": "purchase-cod-1772524432132",
         "title": "COD Order Confirmed! 📦",
@@ -248,8 +278,23 @@
     "password": "$2a$10$P.hJpdElm6Y1SsEOZTEBhuMn4ICbIehPFFFh5RtTZTkUDC2TdSoLi",
     "_id": "mlt3pyymild20mav7n",
     "createdAt": "2026-02-19T06:50:08.830Z",
-    "updatedAt": "2026-02-28T17:45:47.897Z",
+    "updatedAt": "2026-03-03T12:26:59.877Z",
     "notifications": [
+      {
+        "_id": "purchase-cod-1772540819877",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-1772540819009785 has been placed via COD. Total: ₹80.",
+        "type": "Order",
+        "link": "profile.html?tab=orders"
+      },
+      {
+        "_id": "welcome-google-1772540794485",
+        "type": "Digital",
+        "title": "Welcome, devansh! 🚀",
+        "message": "You've successfully connected with Google. Explore your secure library.",
+        "isRead": true,
+        "createdAt": "1970-01-01T00:00:00.000Z"
+      },
       {
         "_id": "new-book-1772300747773",
         "title": "New Arrival! 📚",
@@ -259,7 +304,8 @@
         "isRead": false,
         "createdAt": "2026-02-28T17:45:47.773Z"
       }
-    ]
+    ],
+    "googleId": "115427682973672511539"
   },
   {
     "name": "dev",

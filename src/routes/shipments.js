@@ -166,20 +166,32 @@ router.post('/create', adminAuth, async (req, res) => {
         const c = order.customer || {};
         const addr = (typeof c.address === 'object' && c.address !== null) ? c.address : {};
 
-        const city = c.city || addr.city || addr.district || '';
-        const state = c.state || addr.state || '';
-        const pincode = c.zip || addr.pincode || addr.zip || '';
-        const phone = c.phone || addr.phone || '';
+        const pincode = String(c.pincode || c.zip || addr.pincode || addr.zip || '000000').trim();
+        const city = (c.city || addr.city || addr.district || 'Unknown').trim();
+        const state = (c.state || addr.state || (pincode.startsWith('48') ? 'Madhya Pradesh' : 'Madhya Pradesh')).trim();
+        let phone = String(c.phone || addr.phone || '9999999999').trim().replace(/\D/g, '');
+        if (phone.length < 10) phone = '9999999999';
 
-        const addressLine = [
-            addr.house, addr.street, addr.area, addr.landmark, addr.fullAddress,
-            typeof c.address === 'string' ? c.address : null
-        ].filter(Boolean).join(', ') || 'No address provided';
+        // ROBUST ADDRESS CONSTRUCTION
+        let addressLine = [
+            addr.house, addr.street, addr.area, addr.landmark, addr.fullAddress
+        ].filter(Boolean).map(s => s.trim()).filter(s => s.length > 0).join(', ');
+
+        // Fallback to customer's own address field if object keys are empty
+        if (!addressLine && typeof c.address === 'string') {
+            addressLine = c.address;
+        }
+
+        // Final fallback: if no street info, at least use city/state so it's not empty, 
+        // but warn if essential parts are missing
+        if (!addressLine || addressLine.length < 5) {
+            addressLine = `${city}, ${state}`.trim();
+        }
 
         // Validate mandatory fields BEFORE hitting Nimbus
         const missing = [];
         if (!c.name) missing.push('Consignee name');
-        if (!addressLine || addressLine === 'No address provided') missing.push('Consignee Address');
+        if (!addressLine || addressLine === 'undefined' || addressLine.length < 3) missing.push('Consignee Address');
         if (!city) missing.push('Consignee City');
         if (!state) missing.push('Consignee State');
         if (!pincode || pincode === '000000') missing.push('Consignee Pincode');
@@ -188,17 +200,17 @@ router.post('/create', adminAuth, async (req, res) => {
 
         if (missing.length > 0) {
             return res.status(400).json({
-                message: `Cannot create shipment. Missing: ${missing.join(', ')}. Please check the order address.`
+                message: `Shipment rejected. Missing required info: ${missing.join(', ')}. Please edit user address in Customers tab.`
             });
         }
 
         const payload = {
             order_number: order.orderId,
             consignee: {
-                name: c.name,
+                name: (c.name || 'Customer').substring(0, 50),
                 email: c.email || '',
                 phone: phone,
-                address: addressLine,
+                address: addressLine.substring(0, 100),
                 city: city,
                 state: state,
                 pincode: pincode,
@@ -206,30 +218,33 @@ router.post('/create', adminAuth, async (req, res) => {
             },
             pickup: {
                 warehouse_name: "Office",
-                name: "Abha",
-                contact_name: "Abha",
-                phone: "9798780000",
-                email: "sreshthi+3296@uwo24.com",
-                address: "Badar Cantt, Jabalpur",
+                name: "Gurumukh P Ahuja",
+                contact_name: "Gurumukh P Ahuja",
+                phone: "8871190020",
+                address: "4th floor, SG Square Building, near PNB Bank",
                 city: "Jabalpur",
                 state: "Madhya Pradesh",
-                pincode: "482001"
+                pincode: "482008"
             },
             order_items: order.items.map(item => ({
-                name: item.title,
-                qty: item.quantity,
-                price: item.price,
-                sku: item.productId ? item.productId.title : item.title
+                name: (item.title || 'Product').replace(/[^\x00-\x7F]/g, "").substring(0, 50),
+                qty: Number(item.quantity),
+                price: Number(item.price),
+                sku: (item.productId ? (item.productId.title || item.title) : item.title).replace(/[^\x00-\x7F]/g, "").substring(0, 20)
             })),
             payment_type: (order.paymentMethod || '').toLowerCase() === 'cod' ? 'cod' : 'prepaid',
-            order_amount: order.totalAmount,
-            weight: order.items.reduce((sum, item) => sum + ((item.productId && item.productId.weight) ? item.productId.weight : 500) * item.quantity, 0),
+            order_amount: Number(order.totalAmount),
+            order_total: Number(order.totalAmount),
+            // WEIGHT CONVERSION: Nimbus expects KG, we store grams. Divide by 1000.
+            weight: Number(order.items.reduce((sum, item) => sum + ((item.productId && item.productId.weight) ? item.productId.weight : 500) * item.quantity, 0)) / 1000,
             sub_weight: 0,
-            length: 10, breadth: 10, height: 10,
+            length: 15, breadth: 15, height: 5,
+            shipment_type: 'regular',
             support_email: "sreshthi+3296@uwo24.com",
             support_phone: "9798780000"
         };
 
+        console.log('Sending Weight to Nimbus:', payload.weight, 'kg');
         console.log('Nimbus Shipment Payload:', JSON.stringify(payload, null, 2));
         const result = await nimbusPostService.createShipment(payload);
         console.log('Nimbus API Result:', JSON.stringify(result, null, 2));

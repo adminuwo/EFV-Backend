@@ -429,32 +429,32 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                         phone: address.phone || user.phone || '0000000000',
                         address: addressLine,
                         city: address.city || 'Unknown',
-                        state: address.state || (address.city === 'Jabalpur' || address.pincode && address.pincode.startsWith('48') ? 'Madhya Pradesh' : 'Unknown'),
+                        state: address.state || (address.city === 'Jabalpur' || (address.pincode && address.pincode.startsWith('48')) ? 'Madhya Pradesh' : 'Madhya Pradesh'),
                         pincode: address.pincode || address.zip || '000000',
                         country: 'India'
                     },
                     pickup: {
                         warehouse_name: "Office",
-                        name: "Abha",
-                        contact_name: "Abha",
-                        phone: "9798780000",
-                        email: "sreshthi+3296@uwo24.com",
-                        address: "Badar Cantt, Jabalpur",
+                        name: "Gurumukh P Ahuja",
+                        contact_name: "Gurumukh P Ahuja",
+                        phone: "8871190020",
+                        address: "4th floor, SG Square Building, near PNB Bank",
                         city: "Jabalpur",
                         state: "Madhya Pradesh",
-                        pincode: "482001"
+                        pincode: "482008"
                     },
                     order_items: physicalItems.map(i => ({
-                        name: i.title,
-                        qty: i.quantity,
-                        price: i.price,
-                        sku: i.title
+                        name: (i.title || 'Product').replace(/[^\x00-\x7F]/g, ""), // Remove non-ASCII like ™
+                        qty: Number(i.quantity),
+                        price: Number(i.price),
+                        sku: (i.title || 'SKU').replace(/[^\x00-\x7F]/g, "").substring(0, 20)
                     })),
                     payment_type: 'prepaid',
-                    order_amount: newOrder.totalAmount,
-                    order_total: newOrder.totalAmount,
-                    weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
-                    length: 10, breadth: 10, height: 10
+                    order_amount: Number(newOrder.totalAmount),
+                    order_total: Number(newOrder.totalAmount),
+                    weight: Number(physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0)),
+                    length: 15, breadth: 15, height: 5,
+                    shipment_type: 'regular'
                 };
 
                 console.log('📦 Auto Nimbus Shipment Payload (Cashfree):', JSON.stringify(nimbusPayload, null, 2));
@@ -624,31 +624,32 @@ router.post('/cod', protect, async (req, res) => {
                         phone: newOrder.customer.phone,
                         address: addressLine,
                         city: newOrder.customer.city,
-                        state: newOrder.customer.state || 'Madhya Pradesh',
+                        state: newOrder.customer.state || (newOrder.customer.pincode && newOrder.customer.pincode.startsWith('48') ? 'Madhya Pradesh' : 'Madhya Pradesh'),
                         pincode: newOrder.customer.pincode,
                         country: 'India'
                     },
                     pickup: {
                         warehouse_name: "Office",
-                        name: "Abha",
-                        contact_name: "Abha",
-                        phone: "9798780000",
-                        address: "Badar Cantt, Jabalpur",
+                        name: "Gurumukh P Ahuja",
+                        contact_name: "Gurumukh P Ahuja",
+                        phone: "8871190020",
+                        address: "4th floor, SG Square Building, near PNB Bank",
                         city: "Jabalpur",
                         state: "Madhya Pradesh",
-                        pincode: "482001"
+                        pincode: "482008"
                     },
                     order_items: physicalItems.map(i => ({
-                        name: i.title,
-                        qty: i.quantity,
-                        price: i.price,
-                        sku: i.title
+                        name: (i.title || 'Product').replace(/[^\x00-\x7F]/g, ""),
+                        qty: Number(i.quantity),
+                        price: Number(i.price),
+                        sku: (i.title || 'SKU').replace(/[^\x00-\x7F]/g, "").substring(0, 20)
                     })),
                     payment_type: 'cod',
-                    order_amount: newOrder.totalAmount,
-                    order_total: newOrder.totalAmount,
-                    weight: 500 * physicalItems.length,
-                    length: 10, breadth: 10, height: 10
+                    order_amount: Number(newOrder.totalAmount),
+                    order_total: Number(newOrder.totalAmount),
+                    weight: Number(500 * physicalItems.length),
+                    length: 15, breadth: 15, height: 5,
+                    shipment_type: 'regular'
                 };
 
                 const nimbusResult = await nimbusPostService.createShipment(nimbusPayload);
