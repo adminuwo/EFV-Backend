@@ -77,11 +77,18 @@
     "password": "$2a$10$fSqcc2xdtTLQwkosRflvQerBf3mZ3d4mmgxzR22755ikTB2aIRN1W",
     "_id": "mlrnq3u492vak53seqk",
     "createdAt": "2026-02-18T06:34:35.116Z",
-    "updatedAt": "2026-03-03T07:00:47.654Z",
+    "updatedAt": "2026-03-03T07:53:52.134Z",
     "resetPasswordOTP": null,
     "resetPasswordExpires": null,
     "resetAttempts": null,
     "notifications": [
+      {
+        "_id": "purchase-cod-1772524432132",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-1772524431877653 has been placed via COD. Total: ₹589.",
+        "type": "Order",
+        "link": "profile.html?tab=orders"
+      },
       {
         "_id": "purchase-cf-1772521247653",
         "title": "Purchase Successful! 🎉",

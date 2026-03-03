@@ -82,13 +82,13 @@
     "userId": "mlrnq3u492vak53seqk",
     "productId": "efv_v1_ebook",
     "type": "EBOOK",
-    "lastPage": 2,
-    "totalPages": 4,
-    "lastUpdated": 1771483725208,
+    "lastPage": 8,
+    "totalPages": 176,
+    "lastUpdated": 1772527002892,
     "_id": "mlt27ynzvwrxdwxjhxq",
     "createdAt": "2026-02-19T06:08:09.023Z",
-    "updatedAt": "2026-02-19T06:48:45.209Z",
-    "progress": 50
+    "updatedAt": "2026-03-03T08:36:42.894Z",
+    "progress": 4.545454545454546
   },
   {
     "userId": "mlt3xccbr4w5rafjc6o",

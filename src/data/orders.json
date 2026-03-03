@@ -753,5 +753,46 @@
     "_id": "mma9dvvnlqcvrj3hyz8",
     "createdAt": "2026-03-03T07:00:47.651Z",
     "updatedAt": "2026-03-03T07:00:48.006Z"
+  },
+  {
+    "orderId": "EFV-1772524431877653",
+    "userId": "mlrnq3u492vak53seqk",
+    "customer": {
+      "name": "abha",
+      "email": "abha@uwo24.com",
+      "phone": "8982882237",
+      "address": "street no. 05 , sadar, SADAR",
+      "city": "Jabalpur",
+      "state": "Madhya Pradesh",
+      "country": "India",
+      "pincode": "482008"
+    },
+    "items": [
+      {
+        "productId": "efv_v1_hardcover",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "HARDCOVER",
+        "price": 499,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 589,
+    "shippingCharges": 42.48,
+    "codCharges": 47.7576,
+    "discountAmount": 0,
+    "paymentMethod": "COD",
+    "paymentStatus": "Pending",
+    "status": "Processing",
+    "couponCode": "",
+    "partnerRef": null,
+    "timeline": [
+      {
+        "status": "Order Placed",
+        "note": "Order placed via Cash on Delivery"
+      }
+    ],
+    "_id": "mmaba4vyapex5qmhgxw",
+    "createdAt": "2026-03-03T07:53:51.934Z",
+    "updatedAt": "2026-03-03T07:53:51.934Z"
   }
 ]

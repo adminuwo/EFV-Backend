@@ -3,7 +3,6 @@ const router = express.Router();
 const { Order, Product, User, DigitalLibrary, Coupon } = require('../models');
 const adminAuth = require('../middleware/adminAuth');
 const { protect } = require('../middleware/auth');
-const { createRazorpayOrder, verifyPaymentSignature } = require('../utils/razorpay');
 const { createCashfreeOrder, verifyCashfreePayment } = require('../utils/cashfree');
 const { processPartnerSale } = require('../utils/partnerUtils');
 const path = require('path');
@@ -33,7 +32,7 @@ router.get('/my-orders', protect, async (req, res) => {
 // Config for Frontend (Public Keys)
 router.get('/config', (req, res) => {
     res.json({
-        razorpayKeyId: process.env.RAZORPAY_KEY_ID
+        cashfreeMode: process.env.CASHFREE_MODE || 'sandbox'
     });
 });
 
@@ -187,18 +186,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Create Razorpay Order
-router.post('/razorpay', protect, async (req, res) => {
-    try {
-        const { amount, currency } = req.body;
-        if (!amount) return res.status(400).json({ message: 'Amount is required' });
 
-        const rzpOrder = await createRazorpayOrder(amount, currency || 'INR');
-        res.json(rzpOrder);
-    } catch (error) {
-        res.status(500).json({ message: 'Failed to create Razorpay order' });
-    }
-});
 
 // Create Cashfree Order
 router.post('/cashfree', protect, async (req, res) => {
@@ -706,257 +694,7 @@ router.post('/cod', protect, async (req, res) => {
     }
 });
 
-// Verify Payment and Finalize Order
-router.post('/verify', protect, async (req, res) => {
-    try {
-        const {
-            razorpay_order_id,
-            razorpay_payment_id,
-            razorpay_signature,
-            checkoutData,
-            customer: directCustomer,
-            items: directItems
-        } = req.body;
 
-        // 1. Verify Signature
-        const isValid = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
-        if (!isValid) {
-            return res.status(400).json({ message: 'Invalid payment signature' });
-        }
-
-        // 2. Fulfill Order
-        const user = await User.findOne({ email: req.user.email });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        // Flexible extraction of items and address
-        let finalItems = [];
-        let address = null;
-
-        if (checkoutData) {
-            finalItems = checkoutData.items || [];
-            if (checkoutData.selectedAddressId) {
-                address = user.savedAddresses.find(a => (a._id || a.id || '').toString() === checkoutData.selectedAddressId.toString());
-            } else if (checkoutData.address) {
-                address = checkoutData.address;
-            }
-        } else {
-            finalItems = directItems || [];
-            if (directCustomer) {
-                address = {
-                    fullName: directCustomer.name,
-                    email: directCustomer.email,
-                    phone: directCustomer.phone || user.phone || '0000000000',
-                    house: directCustomer.address || '',
-                    city: directCustomer.city || 'Unknown',
-                    state: directCustomer.state || '',
-                    pincode: directCustomer.pincode || directCustomer.zip || '000000',
-                    country: directCustomer.country || 'India'
-                };
-            }
-        }
-
-        if (!address) return res.status(400).json({ message: 'Shipping address missing' });
-        if (!finalItems || finalItems.length === 0) return res.status(400).json({ message: 'No items in order' });
-
-        let totalAmount = 0;
-        const orderItems = [];
-
-        for (const item of finalItems) {
-            // Find product to get latest price/stock
-            const product = await Product.findById(item.id || item.productId);
-            if (!product) {
-                console.warn(`Product not found during verification: ${item.id || item.productId}`);
-                continue;
-            }
-
-            totalAmount += product.price * item.quantity;
-            orderItems.push({
-                productId: product._id,
-                title: product.title,
-                type: product.type,
-                price: product.price,
-                quantity: item.quantity
-            });
-        }
-
-        if (orderItems.length === 0) return res.status(400).json({ message: 'No valid products found in order' });
-
-        const newOrder = await Order.create({
-            orderId: 'ORD-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000),
-            userId: user._id,
-            customer: {
-                name: address.fullName || user.name,
-                email: address.email || user.email,
-                phone: address.phone || user.phone || '0000000000',
-                address: address, // Store the full address object
-                city: address.city || '',
-                zip: address.pincode || address.zip || ''
-            },
-            items: orderItems,
-            totalAmount: Math.round(totalAmount * 1.18), // Including 18% GST as per frontend calc
-            paymentMethod: 'Razorpay',
-            paymentStatus: 'Paid',
-            status: 'Processing',
-            razorpayOrderId: razorpay_order_id,
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySignature: razorpay_signature,
-            timeline: [{ status: 'Paid', note: 'Payment verified via Razorpay' }]
-        });
-
-        // 3. Handle Digital Library Fulfillment
-        const digitalItems = [];
-        for (const item of orderItems) {
-            if (item.type === 'EBOOK' || item.type === 'AUDIOBOOK') {
-                const product = await Product.findById(item.productId);
-                if (product) {
-                    digitalItems.push({
-                        productId: product._id,
-                        title: product.title,
-                        type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
-                        thumbnail: product.thumbnail,
-                        filePath: product.filePath,
-                        purchasedAt: new Date()
-                    });
-                }
-            }
-        }
-
-        if (digitalItems.length > 0) {
-            await DigitalLibrary.findOneAndUpdate(
-                { userId: user._id.toString() },
-                (lib) => {
-                    if (!lib) {
-                        return { userId: user._id.toString(), items: digitalItems, updatedAt: new Date().toISOString() };
-                    }
-                    if (!lib.items) lib.items = [];
-                    digitalItems.forEach(di => {
-                        if (!lib.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
-                            lib.items.push(di);
-                        }
-                    });
-                    lib.updatedAt = new Date().toISOString();
-                    return lib;
-                },
-                { upsert: true }
-            );
-            console.log(`✅ Digital items added to library for user: ${user.email}`);
-        }
-
-        // 🔔 Add Purchase Notification (directly on already-fetched user)
-        try {
-            if (!user.notifications) user.notifications = [];
-            user.notifications.unshift({
-                _id: 'purchase-' + Date.now(),
-                title: 'Purchase Successful! 🎉',
-                message: `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
-                type: 'Order',
-                link: 'profile.html?tab=orders',
-                isRead: false,
-                createdAt: new Date().toISOString()
-            });
-            user.updatedAt = new Date().toISOString();
-            await user.save();
-            console.log(`🔔 Purchase notification saved for ${user.email}`);
-        } catch (noteErr) {
-            console.error('Purchase notification error:', noteErr);
-        }
-
-        // 🚛 Phase 2: Create Nimbus Shipment for Physical Items
-        const physicalItems = orderItems.filter(i => i.type === 'HARDCOVER' || i.type === 'PAPERBACK');
-        if (physicalItems.length > 0) {
-            try {
-                const nimbusPostService = require('../services/nimbusPostService');
-                const { Shipment } = require('../models');
-
-                const addressLine = [
-                    address.house, address.street, address.area, address.landmark, address.fullAddress,
-                    address.city, address.state, address.pincode
-                ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address not provided';
-
-                // Prepare Nimbus Payload (Confirmed working format)
-                const nimbusPayload = {
-                    order_number: newOrder.orderId,
-                    consignee: {
-                        name: address.fullName || user.name || 'Customer',
-                        email: address.email || user.email,
-                        phone: address.phone || user.phone || '0000000000',
-                        address: addressLine,
-                        city: address.city || 'Unknown',
-                        state: address.state || (address.city === 'Jabalpur' || address.pincode && address.pincode.startsWith('48') ? 'Madhya Pradesh' : 'Unknown'),
-                        pincode: address.pincode || address.zip || '000000',
-                        country: 'India'
-                    },
-                    pickup: {
-                        warehouse_name: "Office",
-                        name: "Abha",
-                        contact_name: "Abha",
-                        phone: "9798780000",
-                        email: "sreshthi+3296@uwo24.com",
-                        address: "Badar Cantt, Jabalpur",
-                        city: "Jabalpur",
-                        state: "Madhya Pradesh",
-                        pincode: "482001"
-                    },
-                    order_items: physicalItems.map(i => ({
-                        name: i.title,
-                        qty: i.quantity,
-                        price: i.price,
-                        sku: i.title
-                    })),
-                    payment_type: 'prepaid',
-                    order_amount: newOrder.totalAmount,
-                    order_total: newOrder.totalAmount,
-                    weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
-                    length: 10, breadth: 10, height: 10
-                };
-
-                console.log('📦 Auto Nimbus Shipment Payload:', JSON.stringify(nimbusPayload, null, 2));
-                const nimbusResult = await nimbusPostService.createShipment(nimbusPayload);
-                console.log('📄 Auto Nimbus API Result:', JSON.stringify(nimbusResult, null, 2));
-
-                if (nimbusResult.status && nimbusResult.data) {
-                    const shipInfo = nimbusResult.data;
-                    const shipment = await Shipment.create({
-                        orderId: newOrder._id.toString(),
-                        shipmentId: shipInfo.shipment_id || (nimbusResult.data && typeof nimbusResult.data === 'string' ? nimbusResult.data : ''),
-                        awbNumber: shipInfo.awb_number || '',
-                        courierName: shipInfo.courier_name || 'NimbusPost',
-                        shippingStatus: 'Processing',
-                        trackingLink: shipInfo.tracking_url || ''
-                    });
-
-                    newOrder.shipmentId = shipment.shipmentId;
-                    newOrder.awbNumber = shipment.awbNumber;
-                    newOrder.courierName = shipment.courierName;
-                    newOrder.trackingLink = shipment.trackingLink;
-                    newOrder.status = 'Processing';
-                    newOrder.timeline.push({ status: 'Processing', note: `Shipment created automatically via NimbusPost (AWB: ${shipment.awbNumber})` });
-                    await newOrder.save();
-                    console.log(`✅ Nimbus shipment created for ${newOrder.orderId}`);
-                } else {
-                    const errMsg = nimbusResult.message || 'Unknown Nimbus API Error';
-                    console.warn(`⚠️ Nimbus Shipment Failed for ${newOrder.orderId}:`, errMsg);
-                    newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment failed: ' + errMsg });
-                    await newOrder.save();
-                }
-            } catch (shipErr) {
-                console.error('❌ Automatic Nimbus Shipment Exception:', shipErr);
-                newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment system error: ' + shipErr.message });
-                await newOrder.save();
-            }
-        }
-
-        res.status(201).json({
-            success: true,
-            order: newOrder,
-            message: 'Payment verified and order placed'
-        });
-
-    } catch (error) {
-        console.error('Verification Error:', error);
-        res.status(500).json({ message: 'Payment verification failed' });
-    }
-});
 
 // Update Order Status (Admin Only)
 router.put('/:id/status', adminAuth, async (req, res) => {
