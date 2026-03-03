@@ -138,6 +138,7 @@ const orderSchema = new mongoose.Schema({
     }],
     totalAmount: { type: Number, required: true },
     shippingCharges: { type: Number, default: 0 },
+    codCharges: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
     paymentMethod: { type: String, default: 'COD' },
     status: {
@@ -156,6 +157,16 @@ const orderSchema = new mongoose.Schema({
     awbNumber: String,
     courierName: String,
     trackingLink: String,
+    couponCode: { type: String, default: '' },           // Coupon applied
+    discountAmount: { type: Number, default: 0 },         // Discount applied
+    partnerRef: {                                          // Partner tracking
+        partnerId: String,
+        partnerName: String,
+        couponCode: String,
+        commissionPercent: Number,
+        commissionAmount: Number,
+        commissionPaid: { type: Boolean, default: false }
+    },
     timeline: [{
         status: String,
         timestamp: { type: Date, default: Date.now },
@@ -194,6 +205,11 @@ const couponSchema = new mongoose.Schema({
     usageLimit: { type: Number, default: 100 },
     usedCount: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    // Partner Tracking
+    isPartnerCoupon: { type: Boolean, default: false },
+    partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partner' },
+    partnerName: { type: String, default: '' },
+    commissionPercent: { type: Number, default: 0 }, // % of order value as commission
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -250,6 +266,39 @@ const supportSchema = new mongoose.Schema({
 
 userProgressSchema.index({ userId: 1, productId: 1 }, { unique: true });
 
+// Partner Schema — tracks marketing partner companies/individuals
+const partnerSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    phone: { type: String, default: '' },
+    company: { type: String, default: '' },
+    password: { type: String, default: '' }, // Set during activation
+    notes: { type: String, default: '' },
+    isActive: { type: Boolean, default: true },
+    isActivated: { type: Boolean, default: false }, // Email verified & password set
+    otp: { type: String, default: '' },
+    otpExpires: { type: Date },
+    totalCommissionEarned: { type: Number, default: 0 },
+    totalCommissionPaid: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const partnerSaleSchema = new mongoose.Schema({
+    partnerId: { type: String, required: true },
+    orderId: { type: String, required: true },
+    customerName: { type: String, required: true },
+    customerEmail: { type: String, default: '' },
+    productName: { type: String, default: '' },
+    totalPrice: { type: Number, required: true },
+    couponCode: { type: String, required: true },
+    commissionPercent: { type: Number, default: 0 },
+    commissionAmount: { type: Number, required: true },
+    paymentStatus: { type: String, enum: ['Paid', 'Unpaid'], default: 'Unpaid' },
+    payoutDate: { type: Date },
+    adminNotes: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+});
+
 module.exports = {
     User: mongoose.model('User', userSchema),
     Product: mongoose.model('Product', productSchema),
@@ -262,5 +311,7 @@ module.exports = {
     Payment: mongoose.model('Payment', paymentSchema),
     Shipment: mongoose.model('Shipment', shipmentSchema),
     Coupon: mongoose.model('Coupon', couponSchema),
-    Support: mongoose.model('Support', supportSchema)
+    Support: mongoose.model('Support', supportSchema),
+    Partner: mongoose.model('Partner', partnerSchema),
+    PartnerSale: mongoose.model('PartnerSale', partnerSaleSchema)
 };

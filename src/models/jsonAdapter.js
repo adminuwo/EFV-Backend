@@ -150,7 +150,7 @@ class JsonModel {
             }
 
             static async updateMany(query, updates) {
-                const data = db.getAll();
+                const data = await db.getAll();
                 let modifiedCount = 0;
                 const updatedData = data.map(item => {
                     const matches = Object.entries(query).every(([key, value]) => {
@@ -228,5 +228,6 @@ module.exports = {
     Payment: JsonModel.createModel('payments.json'),
     Shipment: JsonModel.createModel('shipments.json'),
     Coupon: JsonModel.createModel('coupons.json'),
-    Support: JsonModel.createModel('support.json')
+    Support: JsonModel.createModel('support.json'),
+    Partner: JsonModel.createModel('partners.json')
 };

@@ -77,11 +77,56 @@
     "password": "$2a$10$fSqcc2xdtTLQwkosRflvQerBf3mZ3d4mmgxzR22755ikTB2aIRN1W",
     "_id": "mlrnq3u492vak53seqk",
     "createdAt": "2026-02-18T06:34:35.116Z",
-    "updatedAt": "2026-03-01T09:50:48.416Z",
+    "updatedAt": "2026-03-03T07:00:47.654Z",
     "resetPasswordOTP": null,
     "resetPasswordExpires": null,
     "resetAttempts": null,
-    "notifications": [],
+    "notifications": [
+      {
+        "_id": "purchase-cf-1772521247653",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-24765022. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-03T07:00:47.653Z"
+      },
+      {
+        "_id": "purchase-cf-1772521047076",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-0470695. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-03T06:57:27.077Z"
+      },
+      {
+        "_id": "purchase-cf-1772520568690",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-568688446. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-03T06:49:28.691Z"
+      },
+      {
+        "_id": "purchase-cf-1772520175074",
+        "title": "Purchase Successful! 🎉",
+        "message": "Thank you for your order ORD-175063250. Your items are being processed.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "isRead": false,
+        "createdAt": "2026-03-03T06:42:55.074Z"
+      },
+      {
+        "_id": "welcome-1772516740106",
+        "type": "Digital",
+        "title": "Welcome to EFV, abha! 🚀",
+        "message": "Your journey starts here. Explore our marketplace and build your personal library.",
+        "isRead": true,
+        "createdAt": "1970-01-01T00:00:00.000Z"
+      }
+    ],
     "_lastDeleteStatus": "SUCCESS"
   },
   {

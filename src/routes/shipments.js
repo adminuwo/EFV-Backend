@@ -18,7 +18,7 @@ router.get('/', adminAuth, async (req, res) => {
 
 /**
  * @route   GET /api/shipments/track/:awb
- * @desc    Track a shipment with NimbusPost (LIVE DATA)
+ * @desc    Track a shipment with NimbusPost (LIVE DATA) by AWB
  * @access  Private (Logged in users only)
  */
 router.get('/track/:awb', protect, async (req, res) => {
@@ -36,6 +36,90 @@ router.get('/track/:awb', protect, async (req, res) => {
     }
 });
 
+/**
+ * @route   GET /api/shipments/track-by-order/:orderId
+ * @desc    Track a shipment by Order ID — user must own the order
+ *          Returns order summary + live Nimbus tracking data in one call
+ * @access  Private (Logged in users only)
+ */
+router.get('/track-by-order/:orderId', protect, async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        // 1. Find the order — try by orderId string first, then MongoDB _id
+        let order = await Order.findOne({ orderId: orderId });
+        if (!order && orderId.match(/^[0-9a-fA-F]{24}$/)) {
+            order = await Order.findById(orderId);
+        }
+
+        if (!order) {
+            return res.status(404).json({ status: false, message: 'Order not found' });
+        }
+
+        // Security: Verify the requesting user owns this order
+        const ownerEmail = (order.customer && order.customer.email ? order.customer.email : '').toLowerCase();
+        const reqEmail = (req.user && req.user.email ? req.user.email : '').toLowerCase();
+        const ownerUserId = order.userId ? order.userId.toString() : null;
+        const reqUserId = req.user && req.user._id ? req.user._id.toString() : null;
+
+        const isOwner = (ownerUserId && reqUserId && ownerUserId === reqUserId) ||
+            (ownerEmail && reqEmail && ownerEmail === reqEmail);
+
+        if (!isOwner) {
+            return res.status(403).json({ status: false, message: 'You do not have permission to track this order' });
+        }
+
+        // 2. Get AWB — prefer from order directly, fallback to Shipment collection
+        let awbNumber = order.awbNumber;
+        let courierName = order.courierName;
+        let shipmentId = order.shipmentId;
+        let shippingStatus = order.status;
+
+        if (!awbNumber) {
+            const shipment = await Shipment.findOne({ orderId: order._id.toString() });
+            if (shipment) {
+                awbNumber = shipment.awbNumber;
+                courierName = shipment.courierName;
+                shipmentId = shipment.shipmentId;
+                shippingStatus = shipment.shippingStatus;
+            }
+        }
+
+        // 3. Build response object
+        const orderSummary = {
+            orderId: order.orderId,
+            _id: order._id,
+            status: order.status,
+            awbNumber: awbNumber || null,
+            courierName: courierName || null,
+            shipmentId: shipmentId || null,
+            shippingStatus: shippingStatus || order.status,
+            items: order.items,
+            totalAmount: order.totalAmount,
+            paymentMethod: order.paymentMethod,
+            createdAt: order.createdAt,
+            timeline: order.timeline || []
+        };
+
+        // 4. If AWB exists, fetch live tracking from Nimbus
+        if (awbNumber) {
+            try {
+                const liveTracking = await nimbusPostService.trackShipment(awbNumber);
+                orderSummary.liveTracking = liveTracking;
+            } catch (trackErr) {
+                console.warn('Live tracking fetch failed:', trackErr.message);
+                orderSummary.liveTracking = { status: false, message: 'Live tracking temporarily unavailable' };
+            }
+        }
+
+        res.json({ status: true, data: orderSummary });
+
+    } catch (error) {
+        console.error('Track-by-Order Error:', error.message);
+        res.status(500).json({ status: false, message: 'Error fetching tracking info' });
+    }
+});
+
 // Update shipment status
 router.put('/:id', adminAuth, async (req, res) => {
     try {
@@ -49,7 +133,8 @@ router.put('/:id', adminAuth, async (req, res) => {
 
 /**
  * @route   POST /api/shipments/create
- * @desc    Create a shipment for an order (NimbusPost)
+ * @desc    Create a shipment for an order (NimbusPost) — Admin Only
+ *          Includes duplicate prevention: will not re-create if AWB already exists
  * @access  Admin Only
  */
 router.post('/create', adminAuth, async (req, res) => {
@@ -61,8 +146,24 @@ router.post('/create', adminAuth, async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
+        // DUPLICATE PREVENTION: Check if shipment already exists in Shipment collection
+        const existingShipment = await Shipment.findOne({ orderId: order._id.toString() });
+        if (existingShipment && existingShipment.awbNumber) {
+            return res.status(409).json({
+                message: `Shipment already created for this order. AWB: ${existingShipment.awbNumber}`,
+                shipment: existingShipment
+            });
+        }
+
+        // Also check the order's own awbNumber field
+        if (order.awbNumber) {
+            return res.status(409).json({
+                message: `This order already has a shipment. AWB: ${order.awbNumber}`,
+                awbNumber: order.awbNumber
+            });
+        }
+
         const c = order.customer || {};
-        // Deep address parsing — handles both flat and nested address structures
         const addr = (typeof c.address === 'object' && c.address !== null) ? c.address : {};
 
         const city = c.city || addr.city || addr.district || '';
@@ -75,7 +176,7 @@ router.post('/create', adminAuth, async (req, res) => {
             typeof c.address === 'string' ? c.address : null
         ].filter(Boolean).join(', ') || 'No address provided';
 
-        // --- Validate mandatory fields BEFORE hitting Nimbus ---
+        // Validate mandatory fields BEFORE hitting Nimbus
         const missing = [];
         if (!c.name) missing.push('Consignee name');
         if (!addressLine || addressLine === 'No address provided') missing.push('Consignee Address');
@@ -91,10 +192,8 @@ router.post('/create', adminAuth, async (req, res) => {
             });
         }
 
-        // Prepare NimbusPost Payload (Confirmed working format)
         const payload = {
             order_number: order.orderId,
-
             consignee: {
                 name: c.name,
                 email: c.email || '',
@@ -105,7 +204,6 @@ router.post('/create', adminAuth, async (req, res) => {
                 pincode: pincode,
                 country: 'India'
             },
-
             pickup: {
                 warehouse_name: "Office",
                 name: "Abha",
@@ -117,28 +215,26 @@ router.post('/create', adminAuth, async (req, res) => {
                 state: "Madhya Pradesh",
                 pincode: "482001"
             },
-
             order_items: order.items.map(item => ({
                 name: item.title,
                 qty: item.quantity,
                 price: item.price,
-                sku: item.productId?.title || item.title
+                sku: item.productId ? item.productId.title : item.title
             })),
             payment_type: (order.paymentMethod || '').toLowerCase() === 'cod' ? 'cod' : 'prepaid',
             order_amount: order.totalAmount,
-            weight: order.items.reduce((sum, item) => sum + (item.productId?.weight || 500) * item.quantity, 0),
+            weight: order.items.reduce((sum, item) => sum + ((item.productId && item.productId.weight) ? item.productId.weight : 500) * item.quantity, 0),
             sub_weight: 0,
             length: 10, breadth: 10, height: 10,
             support_email: "sreshthi+3296@uwo24.com",
             support_phone: "9798780000"
         };
 
-        console.log('📦 Nimbus Shipment Payload:', JSON.stringify(payload, null, 2));
+        console.log('Nimbus Shipment Payload:', JSON.stringify(payload, null, 2));
         const result = await nimbusPostService.createShipment(payload);
-        console.log('📄 Nimbus API Result:', JSON.stringify(result, null, 2));
+        console.log('Nimbus API Result:', JSON.stringify(result, null, 2));
 
         if (result.status && result.data) {
-            // Create shipment record
             const newShipment = await Shipment.create({
                 orderId: order._id,
                 shipmentId: result.data.shipment_id || '',
@@ -148,9 +244,10 @@ router.post('/create', adminAuth, async (req, res) => {
                 trackingLink: result.data.tracking_url || ''
             });
 
-            // Update Order
             order.status = 'Processing';
             order.shipmentId = newShipment.shipmentId;
+            order.awbNumber = newShipment.awbNumber;
+            order.courierName = newShipment.courierName;
             order.timeline.push({ status: 'Processing', note: 'Shipment created via NimbusPost' });
             await order.save();
 
@@ -182,7 +279,6 @@ router.get('/sync/:id', adminAuth, async (req, res) => {
             shipment.shippingStatus = newStatus;
             await shipment.save();
 
-            // Update Order as well
             const order = await Order.findById(shipment.orderId);
             if (order && order.status !== newStatus) {
                 order.status = newStatus;

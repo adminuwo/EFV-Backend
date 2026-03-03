@@ -93,8 +93,22 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Incorrect password' });
         }
 
-        // Success
-        // Login success - no extra notification added here to prevent spam
+        // Ensure Welcome notification exists (for existing users)
+        if (!user.notifications) user.notifications = [];
+        const hasWelcome = user.notifications.some(n =>
+            (n.title || '').toLowerCase().includes('welcome') || (n.message || '').toLowerCase().includes('welcome')
+        );
+        if (!hasWelcome) {
+            user.notifications.unshift({
+                _id: 'welcome-' + Date.now(),
+                type: 'Digital',
+                title: `Welcome to EFV, ${user.name}! 🚀`,
+                message: "Your journey starts here. Explore our marketplace and build your personal library.",
+                isRead: true,
+                createdAt: new Date(0).toISOString() // oldest date so it sorts last in regular sort
+            });
+            await user.save();
+        }
 
         res.json({
             _id: user._id,
@@ -183,8 +197,23 @@ router.post('/google', async (req, res) => {
             // Update googleId if not present
             if (!user.googleId) {
                 user.googleId = googleId;
-                await user.save();
             }
+            // Ensure Welcome notification exists for existing Google users
+            if (!user.notifications) user.notifications = [];
+            const hasWelcome = user.notifications.some(n =>
+                (n.title || '').toLowerCase().includes('welcome') || (n.message || '').toLowerCase().includes('welcome')
+            );
+            if (!hasWelcome) {
+                user.notifications.unshift({
+                    _id: 'welcome-google-' + Date.now(),
+                    type: 'Digital',
+                    title: `Welcome, ${user.name}! 🚀`,
+                    message: "You've successfully connected with Google. Explore your secure library.",
+                    isRead: true,
+                    createdAt: new Date(0).toISOString()
+                });
+            }
+            await user.save();
         }
 
         res.json({

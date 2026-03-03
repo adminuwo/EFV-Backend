@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { Order, Product, User, DigitalLibrary } = require('../models');
+const { Order, Product, User, DigitalLibrary, Coupon } = require('../models');
 const adminAuth = require('../middleware/adminAuth');
 const { protect } = require('../middleware/auth');
 const { createRazorpayOrder, verifyPaymentSignature } = require('../utils/razorpay');
 const { createCashfreeOrder, verifyCashfreePayment } = require('../utils/cashfree');
+const { processPartnerSale } = require('../utils/partnerUtils');
 const path = require('path');
 
 
@@ -29,6 +30,13 @@ router.get('/my-orders', protect, async (req, res) => {
     }
 });
 
+// Config for Frontend (Public Keys)
+router.get('/config', (req, res) => {
+    res.json({
+        razorpayKeyId: process.env.RAZORPAY_KEY_ID
+    });
+});
+
 // Get all orders (Admin Only)
 router.get('/', adminAuth, async (req, res) => {
     try {
@@ -42,7 +50,7 @@ router.get('/', adminAuth, async (req, res) => {
 // Place new order (Public)
 router.post('/', async (req, res) => {
     try {
-        const { customer, items, paymentMethod } = req.body;
+        const { customer, items, paymentMethod, couponCode } = req.body;
 
         if (!customer || !items || items.length === 0) {
             return res.status(400).json({ message: 'Invalid order data' });
@@ -76,6 +84,52 @@ router.post('/', async (req, res) => {
             });
         }
 
+        // Handle Coupon logic
+        let discountAmount = 0;
+        let partnerRef = null;
+        let appliedCouponCode = '';
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+            if (coupon) {
+                // Validate coupon (basic check, more thorough check should be done on frontend too)
+                const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+                const isUnderMin = totalAmount < (coupon.minOrder || 0);
+                const isLimitReached = coupon.usedCount >= coupon.usageLimit;
+
+                if (!isExpired && !isUnderMin && !isLimitReached) {
+                    if (coupon.type === 'Percentage') {
+                        discountAmount = (totalAmount * coupon.value) / 100;
+                    } else {
+                        discountAmount = coupon.value;
+                    }
+
+                    // Cap discount to total amount
+                    discountAmount = Math.min(discountAmount, totalAmount);
+                    appliedCouponCode = coupon.code;
+
+                    // Update used count
+                    coupon.usedCount += 1;
+                    await coupon.save();
+
+                    // If it's a partner coupon, associate with the order
+                    if (coupon.isPartnerCoupon && coupon.partnerId) {
+                        const commissionAmount = (totalAmount * (coupon.commissionPercent || 0)) / 100;
+                        partnerRef = {
+                            partnerId: coupon.partnerId.toString(),
+                            partnerName: coupon.partnerName || 'Unknown Partner',
+                            couponCode: coupon.code,
+                            commissionPercent: coupon.commissionPercent,
+                            commissionAmount: Math.round(commissionAmount),
+                            commissionPaid: false
+                        };
+                    }
+                }
+            }
+        }
+
+        const finalAmount = Math.max(0, totalAmount - discountAmount);
+
         // Link to user if possible (even if guest has account)
         let userId = null;
         try {
@@ -90,7 +144,10 @@ router.post('/', async (req, res) => {
             userId: userId,
             customer,
             items: orderItems,
-            totalAmount: Math.round(totalAmount),
+            totalAmount: Math.round(finalAmount),
+            discountAmount: Math.round(discountAmount),
+            couponCode: appliedCouponCode,
+            partnerRef: partnerRef,
             paymentMethod: paymentMethod || 'COD',
             timeline: [{ status: 'Pending', note: 'Order placed successfully' }]
         });
@@ -115,6 +172,11 @@ router.post('/', async (req, res) => {
             } catch (noteErr) {
                 console.error('COD notification error:', noteErr);
             }
+        }
+
+        // 💰 Process Partner Sale (Audit record & Partner Totals)
+        if (newOrder.partnerRef) {
+            await processPartnerSale(newOrder, newOrder.partnerRef);
         }
 
         res.status(201).json(newOrder);
@@ -167,7 +229,7 @@ router.post('/cashfree', protect, async (req, res) => {
 // Verify Cashfree Payment
 router.post('/verify-cashfree', protect, async (req, res) => {
     try {
-        const { order_id, checkoutData, customer: directCustomer, items: directItems } = req.body;
+        const { order_id, checkoutData, customer: directCustomer, items: directItems, couponCode } = req.body;
 
         if (!order_id) return res.status(400).json({ message: 'Order ID is required' });
 
@@ -176,8 +238,12 @@ router.post('/verify-cashfree', protect, async (req, res) => {
         const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS');
 
         if (!successfulPayment) {
+            console.warn(`⚠️ Cashfree Payment Verification Failed for Order: ${order_id}`);
             return res.status(400).json({ message: 'Payment not successful or not found' });
         }
+
+        console.log(`✅ Cashfree Payment Verified for Order: ${order_id}. Initializing fulfillment...`);
+        console.log('📦 Received Verification Data:', JSON.stringify({ checkoutData, directCustomer, items: directItems, couponCode }, null, 2));
 
         // 2. Fulfill Order (Reuse logic from /verify)
         const user = await User.findOne({ email: req.user.email });
@@ -202,7 +268,9 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                     phone: directCustomer.phone || user.phone || '0000000000',
                     house: directCustomer.address || '',
                     city: directCustomer.city || 'Unknown',
-                    pincode: directCustomer.zip || directCustomer.pincode || '000000'
+                    state: directCustomer.state || '',
+                    pincode: directCustomer.pincode || directCustomer.zip || '000000',
+                    country: directCustomer.country || 'India'
                 };
             }
         }
@@ -217,17 +285,62 @@ router.post('/verify-cashfree', protect, async (req, res) => {
             const product = await Product.findById(item.id || item.productId);
             if (!product) continue;
 
-            totalAmount += product.price * item.quantity;
+            const sellingPrice = product.price * (1 - (product.discount || 0) / 100);
+            totalAmount += sellingPrice * item.quantity;
             orderItems.push({
                 productId: product._id,
                 title: product.title,
                 type: product.type,
-                price: product.price,
+                price: sellingPrice,
                 quantity: item.quantity
             });
         }
 
         if (orderItems.length === 0) return res.status(400).json({ message: 'No valid products found in order' });
+
+        // Apply Coupon logic in verification as well (if passed from frontend)
+        let discountAmount = 0;
+        let partnerRef = null;
+        let appliedCouponCode = '';
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+            if (coupon) {
+                // Validate coupon
+                const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+                const isUnderMin = totalAmount < (coupon.minOrder || 0);
+                const isLimitReached = coupon.usedCount >= coupon.usageLimit;
+
+                if (!isExpired && !isUnderMin && !isLimitReached) {
+                    if (coupon.type === 'Percentage') {
+                        discountAmount = (totalAmount * coupon.value) / 100;
+                    } else {
+                        discountAmount = coupon.value;
+                    }
+
+                    discountAmount = Math.min(discountAmount, totalAmount);
+                    appliedCouponCode = coupon.code;
+
+                    // Permanent usage record (increment now since payment is verified)
+                    coupon.usedCount += 1;
+                    await coupon.save();
+
+                    if (coupon.isPartnerCoupon && coupon.partnerId) {
+                        const commissionAmount = (totalAmount * (coupon.commissionPercent || 0)) / 100;
+                        partnerRef = {
+                            partnerId: coupon.partnerId.toString(),
+                            partnerName: coupon.partnerName || 'Unknown Partner',
+                            couponCode: coupon.code,
+                            commissionPercent: coupon.commissionPercent,
+                            commissionAmount: Math.round(commissionAmount),
+                            commissionPaid: false
+                        };
+                    }
+                }
+            }
+        }
+
+        const finalPayable = Math.round(totalAmount - discountAmount);
 
         const newOrder = await Order.create({
             orderId: 'ORD-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000),
@@ -241,7 +354,10 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                 zip: address.pincode || address.zip || ''
             },
             items: orderItems,
-            totalAmount: Math.round(totalAmount),
+            totalAmount: finalPayable, // Use discounted amount
+            discountAmount: Math.round(discountAmount),
+            couponCode: appliedCouponCode,
+            partnerRef: partnerRef,
             paymentMethod: 'Cashfree',
             paymentStatus: 'Paid',
             status: 'Processing',
@@ -286,22 +402,21 @@ router.post('/verify-cashfree', protect, async (req, res) => {
             console.log(`✅ Digital items added to library for user: ${user.email}`);
         }
 
-        // 🔔 Add Purchase Notification
+        // 🔔 Add Purchase Notification (directly on already-fetched user)
         try {
-            await User.findByIdAndUpdate(user._id, (u) => {
-                if (!u.notifications) u.notifications = [];
-                u.notifications.unshift({
-                    _id: 'purchase-cf-' + Date.now(),
-                    title: 'Purchase Successful! 🎉',
-                    message: `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
-                    type: 'Order',
-                    link: 'profile.html?tab=orders',
-                    isRead: false,
-                    createdAt: new Date().toISOString()
-                });
-                u.updatedAt = new Date().toISOString();
-                return u;
+            if (!user.notifications) user.notifications = [];
+            user.notifications.unshift({
+                _id: 'purchase-cf-' + Date.now(),
+                title: 'Purchase Successful! 🎉',
+                message: `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
+                type: 'Order',
+                link: 'profile.html?tab=orders',
+                isRead: false,
+                createdAt: new Date().toISOString()
             });
+            user.updatedAt = new Date().toISOString();
+            await user.save();
+            console.log(`🔔 Purchase notification saved for ${user.email}`);
         } catch (noteErr) {
             console.error('Purchase notification error:', noteErr);
         }
@@ -314,23 +429,22 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                 const { Shipment } = require('../models');
 
                 const addressLine = [
-                    address.house, address.street, address.area, address.landmark, address.fullAddress
-                ].filter(Boolean).join(', ') || 'No address provided';
+                    address.house, address.street, address.area, address.landmark, address.fullAddress,
+                    address.city, address.state, address.pincode
+                ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address not provided';
 
                 const nimbusPayload = {
                     order_number: newOrder.orderId,
-
                     consignee: {
                         name: address.fullName || user.name || 'Customer',
                         email: address.email || user.email,
                         phone: address.phone || user.phone || '0000000000',
                         address: addressLine,
-                        city: address.city || '',
-                        state: address.state || '',
-                        pincode: address.pincode || address.zip || '',
+                        city: address.city || 'Unknown',
+                        state: address.state || (address.city === 'Jabalpur' || address.pincode && address.pincode.startsWith('48') ? 'Madhya Pradesh' : 'Unknown'),
+                        pincode: address.pincode || address.zip || '000000',
                         country: 'India'
                     },
-
                     pickup: {
                         warehouse_name: "Office",
                         name: "Abha",
@@ -342,7 +456,6 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                         state: "Madhya Pradesh",
                         pincode: "482001"
                     },
-
                     order_items: physicalItems.map(i => ({
                         name: i.title,
                         qty: i.quantity,
@@ -351,16 +464,206 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                     })),
                     payment_type: 'prepaid',
                     order_amount: newOrder.totalAmount,
+                    order_total: newOrder.totalAmount,
                     weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
-                    sub_weight: 0,
-                    length: 10, breadth: 10, height: 10,
-                    support_email: "sreshthi+3296@uwo24.com",
-                    support_phone: "9798780000"
+                    length: 10, breadth: 10, height: 10
                 };
 
                 console.log('📦 Auto Nimbus Shipment Payload (Cashfree):', JSON.stringify(nimbusPayload, null, 2));
                 const nimbusResult = await nimbusPostService.createShipment(nimbusPayload);
                 console.log('📄 Auto Nimbus API Result (Cashfree):', JSON.stringify(nimbusResult, null, 2));
+
+                if (nimbusResult.status && nimbusResult.data) {
+                    const shipInfo = nimbusResult.data;
+                    const shipment = await Shipment.create({
+                        orderId: newOrder._id.toString(),
+                        shipmentId: shipInfo.shipment_id || (nimbusResult.data && typeof nimbusResult.data === 'string' ? nimbusResult.data : ''),
+                        awbNumber: shipInfo.awb_number || '',
+                        courierName: shipInfo.courier_name || 'NimbusPost',
+                        shippingStatus: 'Processing',
+                        trackingLink: shipInfo.tracking_url || ''
+                    });
+
+                    newOrder.shipmentId = shipment.shipmentId;
+                    newOrder.awbNumber = shipment.awbNumber;
+                    newOrder.courierName = shipment.courierName;
+                    newOrder.trackingLink = shipment.trackingLink;
+                    newOrder.timeline.push({ status: 'Processing', note: `Shipment created automatically (AWB: ${shipment.awbNumber})` });
+                    await newOrder.save();
+                    console.log(`✅ Nimbus shipment created for ${newOrder.orderId}`);
+                } else {
+                    const errMsg = nimbusResult.message || 'Unknown Nimbus API Error';
+                    console.warn(`⚠️ Nimbus Shipment Failed for ${newOrder.orderId}:`, errMsg);
+                    newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment failed: ' + errMsg });
+                    await newOrder.save();
+                }
+            } catch (shipErr) {
+                console.error('❌ Automatic Nimbus Shipment Exception:', shipErr);
+                newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment system error: ' + shipErr.message });
+                await newOrder.save();
+            }
+        }
+
+        // 💰 Process Partner Sale (Audit record & Partner Totals)
+        if (newOrder.partnerRef) {
+            await processPartnerSale(newOrder, newOrder.partnerRef);
+        }
+
+        res.status(201).json({
+            success: true,
+            order: newOrder,
+            message: 'Payment verified and order placed'
+        });
+
+    } catch (error) {
+        console.error('Cashfree Verification Error:', error);
+        res.status(500).json({ message: 'Payment verification failed' });
+    }
+});
+
+// Create Direct COD Order
+router.post('/cod', protect, async (req, res) => {
+    try {
+        const { orderId, customer, items, couponCode } = req.body;
+        const user = await User.findOne({ email: req.user.email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // 1. Calculate Totals (Safeguard)
+        let subtotal = 0;
+        const processedItems = [];
+
+        for (const item of items) {
+            const product = await Product.findById(item.productId);
+            if (!product) continue;
+
+            const price = product.price * (1 - (product.discount || 0) / 100);
+            subtotal += price * item.quantity;
+
+            processedItems.push({
+                productId: product._id,
+                title: product.title,
+                type: product.type,
+                price: price,
+                quantity: item.quantity
+            });
+
+            // Decrease stock for physical items
+            if (product.type === 'HARDCOVER' || product.type === 'PAPERBACK') {
+                if (product.stock >= item.quantity) {
+                    await Product.findByIdAndUpdate(product._id, { $inc: { stock: -item.quantity } });
+                }
+            }
+        }
+
+        // Coupon Handling
+        let discount = 0;
+        let pRef = null;
+        if (couponCode) {
+            try {
+                const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+                if (coupon) {
+                    if (coupon.partner) pRef = coupon.partner;
+                    if (coupon.type === 'Percentage') discount = (subtotal * coupon.value) / 100;
+                    else discount = coupon.value;
+                }
+            } catch (err) { }
+        }
+
+        // SHIPPING & COD CHARGES Logic (Mirroring Prompt)
+        const shippingCharge = req.body.shippingCharge || 42.48; // Default Zone B
+        const codCharge = 36.58 + (subtotal * 0.0224);
+
+        const finalAmount = Math.round(subtotal - discount + shippingCharge + codCharge);
+
+        // 2. Create Order Record
+        const { Order, Shipment, DigitalLibrary } = require('../models');
+        const newOrder = await Order.create({
+            orderId: orderId || ('COD-' + Date.now()),
+            userId: user._id,
+            customer: {
+                name: customer.fullName || customer.name || 'Customer',
+                email: customer.email,
+                phone: customer.phone,
+                address: customer.street + ', ' + (customer.area || ''),
+                city: customer.city,
+                state: customer.state,
+                country: customer.country || 'India',
+                pincode: customer.pincode
+            },
+            items: processedItems,
+            totalAmount: finalAmount,
+            shippingCharges: shippingCharge,
+            codCharges: codCharge,
+            discountAmount: discount,
+            paymentMethod: 'COD',
+            paymentStatus: 'Pending',
+            status: 'Processing',
+            couponCode: couponCode || '',
+            partnerRef: pRef,
+            timeline: [{
+                status: 'Order Placed',
+                note: 'Order placed via Cash on Delivery'
+            }]
+        });
+
+        // 🚛 Phase 1: Digital Items fulfillment
+        const digitalItems = processedItems.filter(i => i.type === 'EBOOK' || i.type === 'AUDIOBOOK');
+        for (const item of digitalItems) {
+            await DigitalLibrary.findOneAndUpdate(
+                { userId: user._id, productId: item.productId },
+                {
+                    userId: user._id,
+                    productId: item.productId,
+                    purchaseDate: new Date(),
+                    accessStatus: 'Active'
+                },
+                { upsert: true }
+            );
+        }
+
+        // 🚛 Phase 2: Create Nimbus Shipment for Physical Items
+        const physicalItems = processedItems.filter(i => i.type === 'HARDCOVER' || i.type === 'PAPERBACK');
+        if (physicalItems.length > 0) {
+            try {
+                const nimbusPostService = require('../services/nimbusPostService');
+                const addressLine = [customer.street, customer.area, customer.city, customer.state, customer.pincode].filter(Boolean).join(', ');
+
+                const nimbusPayload = {
+                    order_number: newOrder.orderId,
+                    consignee: {
+                        name: newOrder.customer.name,
+                        email: newOrder.customer.email,
+                        phone: newOrder.customer.phone,
+                        address: addressLine,
+                        city: newOrder.customer.city,
+                        state: newOrder.customer.state || 'Madhya Pradesh',
+                        pincode: newOrder.customer.pincode,
+                        country: 'India'
+                    },
+                    pickup: {
+                        warehouse_name: "Office",
+                        name: "Abha",
+                        contact_name: "Abha",
+                        phone: "9798780000",
+                        address: "Badar Cantt, Jabalpur",
+                        city: "Jabalpur",
+                        state: "Madhya Pradesh",
+                        pincode: "482001"
+                    },
+                    order_items: physicalItems.map(i => ({
+                        name: i.title,
+                        qty: i.quantity,
+                        price: i.price,
+                        sku: i.title
+                    })),
+                    payment_type: 'cod',
+                    order_amount: newOrder.totalAmount,
+                    order_total: newOrder.totalAmount,
+                    weight: 500 * physicalItems.length,
+                    length: 10, breadth: 10, height: 10
+                };
+
+                const nimbusResult = await nimbusPostService.createShipment(nimbusPayload);
                 if (nimbusResult.status && nimbusResult.data) {
                     const shipInfo = nimbusResult.data;
                     const shipment = await Shipment.create({
@@ -374,27 +677,32 @@ router.post('/verify-cashfree', protect, async (req, res) => {
 
                     newOrder.shipmentId = shipment.shipmentId;
                     newOrder.awbNumber = shipment.awbNumber;
-                    newOrder.courierName = shipment.courierName;
-                    newOrder.trackingLink = shipment.trackingLink;
-                    newOrder.timeline.push({ status: 'Processing', note: `Shipment created automatically (AWB: ${shipment.awbNumber})` });
+                    newOrder.timeline.push({ status: 'Shipment Created', note: `Nimbus shipment AWB: ${shipment.awbNumber}` });
                     await newOrder.save();
                 }
-            } catch (shipErr) {
-                console.error('❌ Automatic Nimbus Shipment Failed:', shipErr.message);
-                newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment system error: ' + shipErr.message });
+            } catch (err) {
+                console.error('COD Shipment Error:', err);
+                newOrder.timeline.push({ status: 'Fulfillment Issue', note: 'Auto-shipment skipped: ' + err.message });
                 await newOrder.save();
             }
         }
 
-        res.status(201).json({
-            success: true,
-            order: newOrder,
-            message: 'Payment verified and order placed'
+        // Notification
+        if (!user.notifications) user.notifications = [];
+        user.notifications.unshift({
+            _id: 'purchase-cod-' + Date.now(),
+            title: 'COD Order Confirmed! 📦',
+            message: `Order ${newOrder.orderId} has been placed via COD. Total: ₹${newOrder.totalAmount}.`,
+            type: 'Order',
+            link: 'profile.html?tab=orders'
         });
+        await user.save();
+
+        res.status(201).json({ success: true, order: newOrder });
 
     } catch (error) {
-        console.error('Cashfree Verification Error:', error);
-        res.status(500).json({ message: 'Payment verification failed' });
+        console.error('COD Place Error:', error);
+        res.status(500).json({ message: 'Error placing COD order' });
     }
 });
 
@@ -440,7 +748,9 @@ router.post('/verify', protect, async (req, res) => {
                     phone: directCustomer.phone || user.phone || '0000000000',
                     house: directCustomer.address || '',
                     city: directCustomer.city || 'Unknown',
-                    pincode: directCustomer.zip || directCustomer.pincode || '000000'
+                    state: directCustomer.state || '',
+                    pincode: directCustomer.pincode || directCustomer.zip || '000000',
+                    country: directCustomer.country || 'India'
                 };
             }
         }
@@ -532,22 +842,21 @@ router.post('/verify', protect, async (req, res) => {
             console.log(`✅ Digital items added to library for user: ${user.email}`);
         }
 
-        // 🔔 Add Purchase Notification
+        // 🔔 Add Purchase Notification (directly on already-fetched user)
         try {
-            await User.findByIdAndUpdate(user._id, (u) => {
-                if (!u.notifications) u.notifications = [];
-                u.notifications.unshift({
-                    _id: 'purchase-' + Date.now(),
-                    title: 'Purchase Successful! 🎉',
-                    message: `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
-                    type: 'Order',
-                    link: 'profile.html?tab=orders',
-                    isRead: false,
-                    createdAt: new Date().toISOString()
-                });
-                u.updatedAt = new Date().toISOString();
-                return u;
+            if (!user.notifications) user.notifications = [];
+            user.notifications.unshift({
+                _id: 'purchase-' + Date.now(),
+                title: 'Purchase Successful! 🎉',
+                message: `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
+                type: 'Order',
+                link: 'profile.html?tab=orders',
+                isRead: false,
+                createdAt: new Date().toISOString()
             });
+            user.updatedAt = new Date().toISOString();
+            await user.save();
+            console.log(`🔔 Purchase notification saved for ${user.email}`);
         } catch (noteErr) {
             console.error('Purchase notification error:', noteErr);
         }
@@ -560,24 +869,23 @@ router.post('/verify', protect, async (req, res) => {
                 const { Shipment } = require('../models');
 
                 const addressLine = [
-                    address.house, address.street, address.area, address.landmark, address.fullAddress
-                ].filter(Boolean).join(', ') || 'No address provided';
+                    address.house, address.street, address.area, address.landmark, address.fullAddress,
+                    address.city, address.state, address.pincode
+                ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address not provided';
 
                 // Prepare Nimbus Payload (Confirmed working format)
                 const nimbusPayload = {
                     order_number: newOrder.orderId,
-
                     consignee: {
                         name: address.fullName || user.name || 'Customer',
                         email: address.email || user.email,
                         phone: address.phone || user.phone || '0000000000',
                         address: addressLine,
-                        city: address.city || '',
-                        state: address.state || '',
-                        pincode: address.pincode || address.zip || '',
+                        city: address.city || 'Unknown',
+                        state: address.state || (address.city === 'Jabalpur' || address.pincode && address.pincode.startsWith('48') ? 'Madhya Pradesh' : 'Unknown'),
+                        pincode: address.pincode || address.zip || '000000',
                         country: 'India'
                     },
-
                     pickup: {
                         warehouse_name: "Office",
                         name: "Abha",
@@ -589,7 +897,6 @@ router.post('/verify', protect, async (req, res) => {
                         state: "Madhya Pradesh",
                         pincode: "482001"
                     },
-
                     order_items: physicalItems.map(i => ({
                         name: i.title,
                         qty: i.quantity,
@@ -598,11 +905,9 @@ router.post('/verify', protect, async (req, res) => {
                     })),
                     payment_type: 'prepaid',
                     order_amount: newOrder.totalAmount,
+                    order_total: newOrder.totalAmount,
                     weight: physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0),
-                    sub_weight: 0,
-                    length: 10, breadth: 10, height: 10,
-                    support_email: "sreshthi+3296@uwo24.com",
-                    support_phone: "9798780000"
+                    length: 10, breadth: 10, height: 10
                 };
 
                 console.log('📦 Auto Nimbus Shipment Payload:', JSON.stringify(nimbusPayload, null, 2));
@@ -613,7 +918,7 @@ router.post('/verify', protect, async (req, res) => {
                     const shipInfo = nimbusResult.data;
                     const shipment = await Shipment.create({
                         orderId: newOrder._id.toString(),
-                        shipmentId: shipInfo.shipment_id || '',
+                        shipmentId: shipInfo.shipment_id || (nimbusResult.data && typeof nimbusResult.data === 'string' ? nimbusResult.data : ''),
                         awbNumber: shipInfo.awb_number || '',
                         courierName: shipInfo.courier_name || 'NimbusPost',
                         shippingStatus: 'Processing',
@@ -627,16 +932,15 @@ router.post('/verify', protect, async (req, res) => {
                     newOrder.status = 'Processing';
                     newOrder.timeline.push({ status: 'Processing', note: `Shipment created automatically via NimbusPost (AWB: ${shipment.awbNumber})` });
                     await newOrder.save();
-
-                    console.log(`✅ Nimbus Shipment Created: ${shipment.awbNumber}`);
+                    console.log(`✅ Nimbus shipment created for ${newOrder.orderId}`);
                 } else {
-                    console.warn('⚠️ Nimbus Shipment API returned false status:', nimbusResult.message);
-                    newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment failed: ' + (nimbusResult.message || 'Unknown error') });
+                    const errMsg = nimbusResult.message || 'Unknown Nimbus API Error';
+                    console.warn(`⚠️ Nimbus Shipment Failed for ${newOrder.orderId}:`, errMsg);
+                    newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment failed: ' + errMsg });
                     await newOrder.save();
                 }
             } catch (shipErr) {
-                console.error('❌ Automatic Nimbus Shipment Failed:', shipErr.message);
-                // We don't fail the order, just record the issue in timeline
+                console.error('❌ Automatic Nimbus Shipment Exception:', shipErr);
                 newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment system error: ' + shipErr.message });
                 await newOrder.save();
             }
