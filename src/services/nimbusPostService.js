@@ -279,6 +279,33 @@ async function trackShipment(awb) {
 }
 
 /**
+ * Cancel a shipment/order in NimbusPost
+ */
+async function cancelShipment(awb) {
+    if (!cachedToken) await login();
+
+    try {
+        console.log(`🚫 Cancelling Nimbus Shipment AWB ${awb}...`);
+        await logNimbus('CANCEL_REQUEST', { awb });
+
+        const response = await axios.post(`${NIMBUS_BASE_URL}/shipments/cancel`, { awb: [String(awb)] }, {
+            headers: {
+                'Authorization': `Bearer ${cachedToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        await logNimbus('CANCEL_RESPONSE', response.data);
+        return response.data;
+    } catch (error) {
+        const errorData = error.response?.data || error.message;
+        console.error('❌ NimbusPost Cancel Shipment Error:', errorData);
+        await logNimbus('CANCEL_ERROR', errorData);
+        return { status: false, message: error.response?.data?.message || error.message };
+    }
+}
+
+/**
  * Get Serviceability for a pincode
  */
 async function checkServiceability(data) {
@@ -303,6 +330,66 @@ async function checkServiceability(data) {
     }
 }
 
+/**
+ * Reverse Pickup Integration
+ */
+async function createReverseShipment(returnReq, order, address) {
+    if (!cachedToken) await login();
+
+    try {
+        const weight = (returnReq.items || []).reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0);
+
+        const addressLine = [
+            address.house, address.street, address.area, address.landmark, address.fullAddress,
+            address.city, address.state, address.pincode
+        ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address not provided';
+
+        const nimbusPayload = {
+            order_number: `RET-${returnReq.orderId}-${Date.now().toString().slice(-4)}`,
+            consignee: {
+                name: "Gurumukh P Ahuja",
+                email: "support@efv.com",
+                phone: "8871190020",
+                address: "4th floor, SG Square Building, near PNB Bank, Jabalpur, Madhya Pradesh 482008",
+                city: "Jabalpur",
+                state: "Madhya Pradesh",
+                pincode: "482008",
+                country: 'India'
+            },
+            pickup: {
+                warehouse_name: "Customer_Home",
+                name: address.fullName || address.name || 'Customer',
+                phone: address.phone || '0000000000',
+                address: addressLine,
+                city: address.city || 'Unknown',
+                state: address.state || 'Madhya Pradesh',
+                pincode: address.pincode || address.zip || '000000'
+            },
+            order_items: (returnReq.items || []).map(i => ({
+                name: (i.title || 'Product').replace(/[^\x00-\x7F]/g, ""),
+                qty: Number(i.quantity),
+                price: Number(i.price),
+                sku: (i.title || 'SKU').replace(/[^\x00-\x7F]/g, "").substring(0, 20)
+            })),
+            payment_type: "prepaid", // Reverse is always prepaid from business perspective
+            order_amount: Number(order.totalAmount),
+            order_total: Number(order.totalAmount),
+            weight: Number(weight),
+            length: 15, breadth: 15, height: 5,
+            shipment_type: 'reverse'
+        };
+
+        const response = await axios.post(`${NIMBUS_BASE_URL}/shipments`, nimbusPayload, {
+            headers: { 'Authorization': `Bearer ${cachedToken}` }
+        });
+
+        return response.data;
+    } catch (error) {
+        console.error('❌ Reverse Pickup Error:', error.response?.data || error.message);
+        return { status: false, message: error.response?.data?.message || error.message };
+    }
+}
+
 module.exports = {
     login,
     trackShipment,
@@ -311,5 +398,7 @@ module.exports = {
     getBestCourier,
     generateLabel,
     generateManifest,
-    automateShipping
+    automateShipping,
+    createReverseShipment,
+    cancelShipment
 };

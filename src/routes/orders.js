@@ -330,6 +330,9 @@ router.post('/verify-cashfree', protect, async (req, res) => {
 
         const finalPayable = Math.round(totalAmount - discountAmount);
 
+        // Determine if this is a purely digital order
+        const isPurelyDigital = orderItems.every(i => i.type === 'EBOOK' || i.type === 'AUDIOBOOK');
+
         const newOrder = await Order.create({
             orderId: 'ORD-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000),
             userId: user._id,
@@ -342,18 +345,22 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                 zip: address.pincode || address.zip || ''
             },
             items: orderItems,
-            totalAmount: finalPayable, // Use discounted amount
+            totalAmount: finalPayable,
             discountAmount: Math.round(discountAmount),
             couponCode: appliedCouponCode,
             partnerRef: partnerRef,
             paymentMethod: 'Cashfree',
             paymentStatus: 'Paid',
-            status: 'Processing',
+            status: isPurelyDigital ? 'Completed (Digital)' : 'Processing',
+            orderType: isPurelyDigital ? 'digital' : 'physical',
             cashfreeOrderId: order_id,
-            timeline: [{ status: 'Paid', note: 'Payment verified via Cashfree' }]
+            timeline: [{
+                status: isPurelyDigital ? 'Completed (Digital)' : 'Paid',
+                note: isPurelyDigital ? 'Digital Product Purchased & Unlocked' : 'Payment verified via Cashfree'
+            }]
         });
 
-        // Handle Digital Library Fulfillment (Same as Razorpay)
+        // Handle Digital Library Fulfillment
         const digitalItems = [];
         for (const item of orderItems) {
             if (item.type === 'EBOOK' || item.type === 'AUDIOBOOK') {
@@ -365,7 +372,9 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                         type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
                         thumbnail: product.thumbnail,
                         filePath: product.filePath,
-                        purchasedAt: new Date()
+                        purchasedAt: new Date(),
+                        orderId: newOrder.orderId,
+                        accessStatus: 'active'
                     });
                 }
             }
@@ -390,21 +399,20 @@ router.post('/verify-cashfree', protect, async (req, res) => {
             console.log(`✅ Digital items added to library for user: ${user.email}`);
         }
 
-        // 🔔 Add Purchase Notification (directly on already-fetched user)
+        // 🔔 Add Purchase Notification
         try {
             if (!user.notifications) user.notifications = [];
             user.notifications.unshift({
                 _id: 'purchase-cf-' + Date.now(),
-                title: 'Purchase Successful! 🎉',
-                message: `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
+                title: isPurelyDigital ? 'Content Unlocked! 📖' : 'Purchase Successful! 🎉',
+                message: isPurelyDigital ? `Your digital products from order #${newOrder.orderId} are now available in My Library.` : `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
                 type: 'Order',
-                link: 'profile.html?tab=orders',
+                link: isPurelyDigital ? 'profile.html?tab=library' : 'profile.html?tab=orders',
                 isRead: false,
                 createdAt: new Date().toISOString()
             });
             user.updatedAt = new Date().toISOString();
             await user.save();
-            console.log(`🔔 Purchase notification saved for ${user.email}`);
         } catch (noteErr) {
             console.error('Purchase notification error:', noteErr);
         }
@@ -490,6 +498,13 @@ router.post('/cod', protect, async (req, res) => {
 
             const price = product.price * (1 - (product.discount || 0) / 100);
             subtotal += price * item.quantity;
+
+            // 🚫 BLOCK DIGITAL ITEMS IN COD
+            if (product.type === 'EBOOK' || product.type === 'AUDIOBOOK') {
+                return res.status(400).json({
+                    message: `Digital product '${product.title}' cannot be purchased via COD. Only Online Payment is available.`
+                });
+            }
 
             processedItems.push({
                 productId: product._id,
@@ -599,9 +614,9 @@ router.post('/cod', protect, async (req, res) => {
                     newOrder.courierName = shipResult.courierName;
                     newOrder.trackingLink = shipResult.trackingLink;
                     newOrder.labelUrl = shipResult.labelUrl;
-                    newOrder.timeline.push({ 
-                        status: 'Shipped', 
-                        note: `COD Shipment automated via ${shipResult.courierName}. AWB: ${shipResult.awbNumber}` 
+                    newOrder.timeline.push({
+                        status: 'Shipped',
+                        note: `COD Shipment automated via ${shipResult.courierName}. AWB: ${shipResult.awbNumber}`
                     });
                     await newOrder.save();
 
@@ -633,7 +648,8 @@ router.post('/cod', protect, async (req, res) => {
             title: 'COD Order Confirmed! 📦',
             message: `Order ${newOrder.orderId} has been placed via COD. Total: ₹${newOrder.totalAmount}.`,
             type: 'Order',
-            link: 'profile.html?tab=orders'
+            link: 'profile.html?tab=orders',
+            createdAt: new Date().toISOString()
         });
         await user.save();
 
@@ -702,6 +718,63 @@ router.put('/:id/status', adminAuth, async (req, res) => {
                     );
                     console.log(`✅ Status Update: Digital items unlocked for ${order.customer.email}`);
                 }
+            }
+        }
+
+        // 🔔 Notification for Status Change
+        if (status !== oldStatus) {
+            try {
+                const userId = order.userId || (await User.findOne({ email: order.customer.email }))?._id;
+                if (userId) {
+                    const user = await User.findById(userId);
+                    if (user) {
+                        if (!user.notifications) user.notifications = [];
+
+                        let notification = null;
+                        const orderIdDisplay = order.orderId || order._id;
+
+                        switch (status) {
+                            case 'Cancelled':
+                                notification = {
+                                    _id: 'status-cancel-' + Date.now(),
+                                    title: 'Order Cancelled ❌',
+                                    message: `Your order ${orderIdDisplay} has been cancelled.`,
+                                    type: 'Order',
+                                    link: 'profile.html?tab=orders',
+                                    createdAt: new Date().toISOString()
+                                };
+                                break;
+                            case 'Shipped':
+                                notification = {
+                                    _id: 'status-shipped-' + Date.now(),
+                                    title: 'Order Shipped! 🚚',
+                                    message: `Your order ${orderIdDisplay} is out for delivery.`,
+                                    type: 'Order',
+                                    link: 'profile.html?tab=orders',
+                                    createdAt: new Date().toISOString()
+                                };
+                                break;
+                            case 'Delivered':
+                                notification = {
+                                    _id: 'status-delivered-' + Date.now(),
+                                    title: 'Order Delivered! 🎉',
+                                    message: `Your order ${orderIdDisplay} has been delivered successfully.`,
+                                    type: 'Order',
+                                    link: 'profile.html?tab=orders',
+                                    createdAt: new Date().toISOString()
+                                };
+                                break;
+                        }
+
+                        if (notification) {
+                            user.notifications.unshift(notification);
+                            await user.save();
+                            console.log(`🔔 Status notification (${status}) sent to ${user.email}`);
+                        }
+                    }
+                }
+            } catch (notifyErr) {
+                console.error('Error sending status notification:', notifyErr);
             }
         }
 
@@ -918,6 +991,92 @@ router.delete('/:id', adminAuth, async (req, res) => {
     } catch (error) {
         console.error('Delete Order Error:', error);
         res.status(500).json({ message: 'Error deleting order' });
+    }
+});
+
+// ============================================================
+// CANCEL ORDER ROUTE (User + Admin)
+// ============================================================
+router.post('/cancel/:orderId', protect, async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { reason } = req.body;
+        const nimbusPostService = require('../services/nimbusPostService');
+        const { OrderCancellation } = require('../models');
+
+        // Fetch order
+        const order = await Order.findOne({ orderId });
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        // Security: Only owner or admin can cancel
+        const isAdmin = req.user.role === 'admin' || req.user.email?.toLowerCase() === 'admin@uwo24.com';
+        const isOwner = order.userId?.toString() === req.user._id?.toString() ||
+            order.customer?.email?.toLowerCase() === req.user.email?.toLowerCase();
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ message: 'Unauthorized to cancel this order' });
+        }
+
+        // Shipment Status Check — cannot cancel if already picked up
+        const blockedStatuses = ['Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'];
+        if (blockedStatuses.includes(order.status)) {
+            return res.status(400).json({
+                message: 'Order already picked up. Cancellation is no longer available.'
+            });
+        }
+
+        // Already cancelled?
+        if (order.status === 'Cancelled') {
+            return res.status(400).json({ message: 'Order is already cancelled' });
+        }
+
+        // Step 1: Cancel on NimbusPost if AWB exists
+        let nimbusResult = null;
+        if (order.awbNumber) {
+            nimbusResult = await nimbusPostService.cancelShipment(order.awbNumber);
+            if (!nimbusResult.status) {
+                console.warn(`⚠️ NimbusPost cancel failed for ${order.awbNumber}: ${nimbusResult.message}`);
+                // We proceed with DB cancellation anyway to avoid blocking user
+            }
+        }
+
+        // Step 2: Update order status to Cancelled
+        order.status = 'Cancelled';
+        order.timeline.push({
+            status: 'Cancelled',
+            note: reason || 'Cancelled by user',
+            timestamp: new Date()
+        });
+        await order.save();
+
+        // Step 3: Save cancellation record
+        await OrderCancellation.create({
+            orderId: order.orderId,
+            userId: req.user._id,
+            reason: reason || 'User requested cancellation',
+            cancelledAt: new Date()
+        });
+
+        // Step 4: Send notification to user
+        const user = await User.findById(req.user._id);
+        if (user) {
+            user.notifications.push({
+                title: 'Order Cancelled',
+                message: `Your order #${order.orderId} has been cancelled. Refund (if applicable) will be processed within 5–7 business days.`,
+                type: 'Order',
+                isRead: false
+            });
+            await user.save();
+        }
+
+        res.json({
+            success: true,
+            message: 'Your order has been cancelled successfully.',
+            nimbusStatus: nimbusResult?.status ? 'Shipment cancelled on NimbusPost' : 'Manual DB cancel (NimbusPost may need manual update)'
+        });
+
+    } catch (error) {
+        console.error('Cancel Order Error:', error);
+        res.status(500).json({ message: 'Server error while cancelling order' });
     }
 });
 

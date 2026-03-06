@@ -201,7 +201,9 @@ router.post('/add', protect, async (req, res) => {
             type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
             thumbnail: product.thumbnail,
             filePath: product.filePath,
-            purchasedAt: new Date()
+            purchasedAt: new Date(),
+            orderId: 'MANUAL',
+            accessStatus: 'active'
         });
 
         await library.save();

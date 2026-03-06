@@ -107,7 +107,9 @@ const digitalLibrarySchema = new mongoose.Schema({
         lastAccessed: { type: Date, default: Date.now },
         // Audiobook chapter-level resume
         lastChapter: { type: Number, default: 0 },
-        lastChapterTime: { type: Number, default: 0 }
+        lastChapterTime: { type: Number, default: 0 },
+        orderId: String,
+        accessStatus: { type: String, default: 'active' }
     }]
 });
 
@@ -143,9 +145,10 @@ const orderSchema = new mongoose.Schema({
     paymentMethod: { type: String, default: 'COD' },
     status: {
         type: String,
-        enum: ['Pending', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned', 'Failed'],
+        enum: ['Pending', 'Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned', 'Failed', 'Completed (Digital)'],
         default: 'Pending'
     },
+    orderType: { type: String, enum: ['physical', 'digital'], default: 'physical' },
     paymentStatus: { type: String, default: 'Pending' },
     razorpayOrderId: String,
     razorpayPaymentId: String,
@@ -301,6 +304,30 @@ const partnerSaleSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const returnRequestSchema = new mongoose.Schema({
+    orderId: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    items: [{
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+        title: String,
+        price: Number,
+        quantity: Number
+    }],
+    reason: { type: String, required: true },
+    imageProof: String, // Path to uploaded image
+    status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Picked Up', 'Returned'], default: 'Pending' },
+    adminNotes: String,
+    reverseShipmentId: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const orderCancellationSchema = new mongoose.Schema({
+    orderId: { type: String, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    reason: { type: String, default: 'User requested cancellation' },
+    cancelledAt: { type: Date, default: Date.now }
+});
+
 module.exports = {
     User: mongoose.model('User', userSchema),
     Product: mongoose.model('Product', productSchema),
@@ -315,5 +342,7 @@ module.exports = {
     Coupon: mongoose.model('Coupon', couponSchema),
     Support: mongoose.model('Support', supportSchema),
     Partner: mongoose.model('Partner', partnerSchema),
-    PartnerSale: mongoose.model('PartnerSale', partnerSaleSchema)
+    PartnerSale: mongoose.model('PartnerSale', partnerSaleSchema),
+    ReturnRequest: mongoose.model('ReturnRequest', returnRequestSchema),
+    OrderCancellation: mongoose.model('OrderCancellation', orderCancellationSchema)
 };

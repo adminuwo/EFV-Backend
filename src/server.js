@@ -95,6 +95,7 @@ app.use('/api/partner-portal', require('./routes/partnerPortal'));
 app.use('/api/support', require('./routes/support'));
 app.use('/api/audiobook-progress', require('./routes/audiobookProgress'));
 app.use("/api/nimbus", nimbusShipping);
+app.use('/api/returns', require('./routes/returns'));
 app.use(express.static(frontendPath));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

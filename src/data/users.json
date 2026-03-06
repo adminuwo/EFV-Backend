@@ -21,10 +21,33 @@
     "updatedAt": "2026-03-06T06:15:35.643Z"
   },
   {
+    "name": "Aditi",
+    "email": "aditi@uwo24.com",
+    "password": "$2a$10$h2x3t8WFSll6gO.gjFRAquc4zNVQoORJgYaLMDWVJsRiJerH9u0Li",
+    "role": "user",
+    "notifications": [
+      {
+        "_id": "welcome-1772784895996",
+        "type": "Digital",
+        "title": "Welcome to EFV, Aditi! 🚀",
+        "message": "Your journey starts here. Explore our marketplace and build your personal library.",
+        "isRead": true,
+        "createdAt": "1970-01-01T00:00:00.000Z"
+      }
+    ],
+    "_id": "aditi_local_test",
+    "createdAt": "2026-03-06T13:40:00.000Z",
+    "updatedAt": "2026-03-06T09:00:08.023Z",
+    "purchasedProducts": [
+      "efv_v1_audiobook"
+    ],
+    "_lastDeleteStatus": "SUCCESS"
+  },
+  {
     "_id": "admin-efv-001",
     "name": "Super Admin",
     "email": "admin@uwo24.com",
-    "password": "$2a$10$W/g2/e3EYDXIARKxQE62BexQo0hoVA7iI4Zauj2BX9fhvtSqXEpRm",
+    "password": "$2a$10$h2x3t8WFSll6gO.gjFRAquc4zNVQoORJgYaLMDWVJsRiJerH9u0Li",
     "role": "admin",
     "phone": "",
     "notifications": [
