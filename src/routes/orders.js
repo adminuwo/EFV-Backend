@@ -194,9 +194,10 @@ router.post('/cashfree', protect, async (req, res) => {
         const { amount, customerName, customerPhone, customerEmail } = req.body;
         if (!amount) return res.status(400).json({ message: 'Amount is required' });
 
-        const roundedAmount = Number(amount).toFixed(2);
+        const orderId = `EFV-CF-${Date.now()}`;
 
         const cfOrder = await createCashfreeOrder({
+            orderId: orderId,
             amount: Number(roundedAmount),
             customerId: req.user._id.toString(),
             customerName: customerName || req.user.name,
