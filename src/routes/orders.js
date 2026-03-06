@@ -416,78 +416,42 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                 const nimbusPostService = require('../services/nimbusPostService');
                 const { Shipment } = require('../models');
 
-                const addressLine = [
-                    address.house, address.street, address.area, address.landmark, address.fullAddress,
-                    address.city, address.state, address.pincode
-                ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address not provided';
+                console.log(`📦 Triggering Auto-Shipping for Order: ${newOrder.orderId}`);
+                const shipResult = await nimbusPostService.automateShipping(newOrder, address, physicalItems, 'prepaid');
 
-                const nimbusPayload = {
-                    order_number: newOrder.orderId,
-                    consignee: {
-                        name: address.fullName || user.name || 'Customer',
-                        email: address.email || user.email,
-                        phone: address.phone || user.phone || '0000000000',
-                        address: addressLine,
-                        city: address.city || 'Unknown',
-                        state: address.state || (address.city === 'Jabalpur' || (address.pincode && address.pincode.startsWith('48')) ? 'Madhya Pradesh' : 'Madhya Pradesh'),
-                        pincode: address.pincode || address.zip || '000000',
-                        country: 'India'
-                    },
-                    pickup: {
-                        warehouse_name: "Office",
-                        name: "Gurumukh P Ahuja",
-                        contact_name: "Gurumukh P Ahuja",
-                        phone: "8871190020",
-                        address: "4th floor, SG Square Building, near PNB Bank",
-                        city: "Jabalpur",
-                        state: "Madhya Pradesh",
-                        pincode: "482008"
-                    },
-                    order_items: physicalItems.map(i => ({
-                        name: (i.title || 'Product').replace(/[^\x00-\x7F]/g, ""), // Remove non-ASCII like ™
-                        qty: Number(i.quantity),
-                        price: Number(i.price),
-                        sku: (i.title || 'SKU').replace(/[^\x00-\x7F]/g, "").substring(0, 20)
-                    })),
-                    payment_type: 'prepaid',
-                    order_amount: Number(newOrder.totalAmount),
-                    order_total: Number(newOrder.totalAmount),
-                    weight: Number(physicalItems.reduce((sum, i) => sum + (i.weight || 500) * i.quantity, 0)),
-                    length: 15, breadth: 15, height: 5,
-                    shipment_type: 'regular'
-                };
+                if (shipResult.status) {
+                    // Update Order
+                    newOrder.shipmentId = shipResult.shipmentId;
+                    newOrder.awbNumber = shipResult.awbNumber;
+                    newOrder.courierName = shipResult.courierName;
+                    newOrder.trackingLink = shipResult.trackingLink;
+                    newOrder.labelUrl = shipResult.labelUrl;
+                    newOrder.timeline.push({
+                        status: 'Shipped',
+                        note: `Shipment automated via ${shipResult.courierName}. AWB: ${shipResult.awbNumber}`
+                    });
+                    await newOrder.save();
 
-                console.log('📦 Auto Nimbus Shipment Payload (Cashfree):', JSON.stringify(nimbusPayload, null, 2));
-                const nimbusResult = await nimbusPostService.createShipment(nimbusPayload);
-                console.log('📄 Auto Nimbus API Result (Cashfree):', JSON.stringify(nimbusResult, null, 2));
-
-                if (nimbusResult.status && nimbusResult.data) {
-                    const shipInfo = nimbusResult.data;
-                    const shipment = await Shipment.create({
+                    // Create Shipment Record for history
+                    await Shipment.create({
                         orderId: newOrder._id.toString(),
-                        shipmentId: shipInfo.shipment_id || (nimbusResult.data && typeof nimbusResult.data === 'string' ? nimbusResult.data : ''),
-                        awbNumber: shipInfo.awb_number || '',
-                        courierName: shipInfo.courier_name || 'NimbusPost',
-                        shippingStatus: 'Processing',
-                        trackingLink: shipInfo.tracking_url || ''
+                        shipmentId: shipResult.shipmentId,
+                        awbNumber: shipResult.awbNumber,
+                        courierName: shipResult.courierName,
+                        labelUrl: shipResult.labelUrl,
+                        trackingLink: shipResult.trackingLink,
+                        shippingStatus: 'Processing'
                     });
 
-                    newOrder.shipmentId = shipment.shipmentId;
-                    newOrder.awbNumber = shipment.awbNumber;
-                    newOrder.courierName = shipment.courierName;
-                    newOrder.trackingLink = shipment.trackingLink;
-                    newOrder.timeline.push({ status: 'Processing', note: `Shipment created automatically (AWB: ${shipment.awbNumber})` });
-                    await newOrder.save();
-                    console.log(`✅ Nimbus shipment created for ${newOrder.orderId}`);
+                    console.log(`✅ Nimbus Automation Complete for ${newOrder.orderId}`);
                 } else {
-                    const errMsg = nimbusResult.message || 'Unknown Nimbus API Error';
-                    console.warn(`⚠️ Nimbus Shipment Failed for ${newOrder.orderId}:`, errMsg);
-                    newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment failed: ' + errMsg });
+                    console.warn(`⚠️ Nimbus Automation Failed for ${newOrder.orderId}:`, shipResult.message);
+                    newOrder.timeline.push({ status: 'Processing', note: 'Auto-shipping failed: ' + shipResult.message });
                     await newOrder.save();
                 }
             } catch (shipErr) {
-                console.error('❌ Automatic Nimbus Shipment Exception:', shipErr);
-                newOrder.timeline.push({ status: 'Payment Verified', note: 'Auto-shipment system error: ' + shipErr.message });
+                console.error('❌ Nimbus Automation Exception:', shipErr);
+                newOrder.timeline.push({ status: 'Processing', note: 'Auto-shipping system error: ' + shipErr.message });
                 await newOrder.save();
             }
         }
@@ -614,64 +578,50 @@ router.post('/cod', protect, async (req, res) => {
         if (physicalItems.length > 0) {
             try {
                 const nimbusPostService = require('../services/nimbusPostService');
-                const addressLine = [customer.street, customer.area, customer.city, customer.state, customer.pincode].filter(Boolean).join(', ');
+                const { Shipment } = require('../models');
 
-                const nimbusPayload = {
-                    order_number: newOrder.orderId,
-                    consignee: {
-                        name: newOrder.customer.name,
-                        email: newOrder.customer.email,
-                        phone: newOrder.customer.phone,
-                        address: addressLine,
-                        city: newOrder.customer.city,
-                        state: newOrder.customer.state || (newOrder.customer.pincode && newOrder.customer.pincode.startsWith('48') ? 'Madhya Pradesh' : 'Madhya Pradesh'),
-                        pincode: newOrder.customer.pincode,
-                        country: 'India'
-                    },
-                    pickup: {
-                        warehouse_name: "Office",
-                        name: "Gurumukh P Ahuja",
-                        contact_name: "Gurumukh P Ahuja",
-                        phone: "8871190020",
-                        address: "4th floor, SG Square Building, near PNB Bank",
-                        city: "Jabalpur",
-                        state: "Madhya Pradesh",
-                        pincode: "482008"
-                    },
-                    order_items: physicalItems.map(i => ({
-                        name: (i.title || 'Product').replace(/[^\x00-\x7F]/g, ""),
-                        qty: Number(i.quantity),
-                        price: Number(i.price),
-                        sku: (i.title || 'SKU').replace(/[^\x00-\x7F]/g, "").substring(0, 20)
-                    })),
-                    payment_type: 'cod',
-                    order_amount: Number(newOrder.totalAmount),
-                    order_total: Number(newOrder.totalAmount),
-                    weight: Number(500 * physicalItems.length),
-                    length: 15, breadth: 15, height: 5,
-                    shipment_type: 'regular'
+                const addressForShipping = {
+                    fullName: customer.fullName || customer.name,
+                    email: customer.email,
+                    phone: customer.phone,
+                    house: customer.street,
+                    city: customer.city,
+                    state: customer.state,
+                    pincode: customer.pincode
                 };
 
-                const nimbusResult = await nimbusPostService.createShipment(nimbusPayload);
-                if (nimbusResult.status && nimbusResult.data) {
-                    const shipInfo = nimbusResult.data;
-                    const shipment = await Shipment.create({
-                        orderId: newOrder._id.toString(),
-                        shipmentId: shipInfo.shipment_id || '',
-                        awbNumber: shipInfo.awb_number || '',
-                        courierName: shipInfo.courier_name || 'NimbusPost',
-                        shippingStatus: 'Processing',
-                        trackingLink: shipInfo.tracking_url || ''
-                    });
+                console.log(`📦 Triggering Auto-Shipping for COD Order: ${newOrder.orderId}`);
+                const shipResult = await nimbusPostService.automateShipping(newOrder, addressForShipping, physicalItems, 'cod');
 
-                    newOrder.shipmentId = shipment.shipmentId;
-                    newOrder.awbNumber = shipment.awbNumber;
-                    newOrder.timeline.push({ status: 'Shipment Created', note: `Nimbus shipment AWB: ${shipment.awbNumber}` });
+                if (shipResult.status) {
+                    newOrder.shipmentId = shipResult.shipmentId;
+                    newOrder.awbNumber = shipResult.awbNumber;
+                    newOrder.courierName = shipResult.courierName;
+                    newOrder.trackingLink = shipResult.trackingLink;
+                    newOrder.labelUrl = shipResult.labelUrl;
+                    newOrder.timeline.push({ 
+                        status: 'Shipped', 
+                        note: `COD Shipment automated via ${shipResult.courierName}. AWB: ${shipResult.awbNumber}` 
+                    });
+                    await newOrder.save();
+
+                    await Shipment.create({
+                        orderId: newOrder._id.toString(),
+                        shipmentId: shipResult.shipmentId,
+                        awbNumber: shipResult.awbNumber,
+                        courierName: shipResult.courierName,
+                        labelUrl: shipResult.labelUrl,
+                        trackingLink: shipResult.trackingLink,
+                        shippingStatus: 'Processing'
+                    });
+                } else {
+                    console.warn(`⚠️ Nimbus COD Automation Failed for ${newOrder.orderId}:`, shipResult.message);
+                    newOrder.timeline.push({ status: 'Processing', note: 'Auto-shipping failed: ' + shipResult.message });
                     await newOrder.save();
                 }
             } catch (err) {
-                console.error('COD Shipment Error:', err);
-                newOrder.timeline.push({ status: 'Fulfillment Issue', note: 'Auto-shipment skipped: ' + err.message });
+                console.error('❌ COD Nimbus Automation Exception:', err);
+                newOrder.timeline.push({ status: 'Fulfillment Issue', note: 'Auto-shipment system error: ' + err.message });
                 await newOrder.save();
             }
         }

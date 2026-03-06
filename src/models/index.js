@@ -157,6 +157,8 @@ const orderSchema = new mongoose.Schema({
     awbNumber: String,
     courierName: String,
     trackingLink: String,
+    labelUrl: String,           // URL for the shipping label
+    courierId: String,          // Nimbus courier internal ID
     couponCode: { type: String, default: '' },           // Coupon applied
     discountAmount: { type: Number, default: 0 },         // Discount applied
     partnerRef: {                                          // Partner tracking

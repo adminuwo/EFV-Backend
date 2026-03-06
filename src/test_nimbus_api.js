@@ -3,53 +3,51 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const nimbusPostService = require('./services/nimbusPostService');
 const fs = require('fs');
 
-async function test() {
-    let output = { logs: [], result: null, error: null };
-    output.logs.push('--- Testing /shipments endpoint ---');
+async function testAutomatedFlow() {
+    console.log('--- Testing FULL Automated Nimbus Flow ---');
+
+    const mockOrder = {
+        orderId: "TEST-AUTO-" + Date.now(),
+        totalAmount: 499
+    };
+
+    const mockAddress = {
+        fullName: "Test User",
+        email: "sreshthi+3296@uwo24.com",
+        phone: "9876543210",
+        house: "Test House 123",
+        city: "Jabalpur",
+        state: "Madhya Pradesh",
+        pincode: "482001"
+    };
+
+    const mockItems = [{
+        title: "Test Hardcover Book",
+        quantity: 1,
+        price: 499,
+        weight: 500, // grams
+        type: 'HARDCOVER'
+    }];
 
     try {
-        const testPayload = {
-            order_number: "TEST" + Date.now(),
-            shipping_address: {
-                first_name: "Test",
-                last_name: "User",
-                email: "test@example.com",
-                phone: "9876543210",
-                address: "Test Address, Sadar",
-                city: "Jabalpur",
-                state: "Madhya Pradesh",
-                pincode: "482001",
-                country: "India"
-            },
-            pickup_address: {
-                name: "Office",
-                address: "Jabalpur",
-                city: "Jabalpur",
-                state: "Madhya Pradesh",
-                pincode: "482001",
-                phone: "9876543210"
-            },
-            order_items: [{
-                name: "Test Book",
-                qty: 1,
-                price: 10,
-                sku: "test-sku"
-            }],
-            payment_type: "prepaid",
-            order_total: 10,
-            weight: 500,
-            length: 10,
-            breadth: 10,
-            height: 10
-        };
+        console.log('🚀 Calling automateShipping()...');
+        const result = await nimbusPostService.automateShipping(mockOrder, mockAddress, mockItems, 'prepaid');
 
-        output.logs.push('📦 Calling createShipment()...');
-        const result = await nimbusPostService.createShipment(testPayload);
-        output.result = result;
+        console.log('🏆 Automated Flow Result:', JSON.stringify(result, null, 2));
+
+        fs.writeFileSync(
+            path.join(__dirname, 'test_nimbus_automation_result.json'),
+            JSON.stringify(result, null, 2)
+        );
+
+        if (result.status) {
+            console.log('✅ SUCCESS: Full shipping automation verified.');
+        } else {
+            console.error('❌ FAILED:', result.message);
+        }
     } catch (err) {
-        output.error = err.message;
+        console.error('💥 CRITICAL ERROR:', err.message);
     }
-    fs.writeFileSync(path.join(__dirname, 'test_nimbus_result.json'), JSON.stringify(output, null, 2));
 }
 
-test();
+testAutomatedFlow();
