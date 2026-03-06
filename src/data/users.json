@@ -19,5 +19,25 @@
     "_id": "mmei3ba3cwd4qk3sk8l",
     "createdAt": "2026-03-06T06:15:35.643Z",
     "updatedAt": "2026-03-06T06:15:35.643Z"
+  },
+  {
+    "_id": "admin-efv-001",
+    "name": "Super Admin",
+    "email": "admin@uwo24.com",
+    "password": "$2a$10$W/g2/e3EYDXIARKxQE62BexQo0hoVA7iI4Zauj2BX9fhvtSqXEpRm",
+    "role": "admin",
+    "phone": "",
+    "notifications": [
+      {
+        "_id": "welcome-1772781381562",
+        "type": "Digital",
+        "title": "Welcome to EFV, Super Admin! 🚀",
+        "message": "Your journey starts here. Explore our marketplace and build your personal library.",
+        "isRead": true,
+        "createdAt": "1970-01-01T00:00:00.000Z"
+      }
+    ],
+    "createdAt": "2026-03-06T07:13:56.710Z",
+    "updatedAt": "2026-03-06T07:16:21.566Z"
   }
 ]
