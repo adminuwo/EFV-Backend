@@ -7,8 +7,8 @@ async function testAutomatedFlow() {
     console.log('--- Testing FULL Automated Nimbus Flow ---');
 
     const mockOrder = {
-        orderId: "TEST-AUTO-" + Date.now(),
-        totalAmount: 499
+        orderId: "TEST-FIXED-" + Date.now(),
+        totalAmount: 177
     };
 
     const mockAddress = {

@@ -37,7 +37,8 @@ async function logNimbus(message, data) {
         if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
         const logPath = path.join(logDir, 'nimbus_debug.log');
         const entry = `[${new Date().toISOString()}] ${message}: ${JSON.stringify(data, null, 2)}\n`;
-        fs.appendFileSync(logPath, entry);
+        // Force UTF-8 encoding for reliable reading
+        fs.appendFileSync(logPath, entry, 'utf8');
     } catch (err) {
         console.error('Logging failed:', err.message);
     }
@@ -133,13 +134,18 @@ async function generateLabel(awb) {
 async function generateManifest(awb) {
     if (!cachedToken) await login();
     try {
-        const response = await axios.post(`${NIMBUS_BASE_URL}/shipments/manifest`, { awb }, {
+        console.log(`📡 Sending Manifest Request for AWB: ${awb}...`);
+        // Using correct payload format: { "awbs": ["AWB1", "AWB2"] }
+        const response = await axios.post(`${NIMBUS_BASE_URL}/shipments/manifest`, { awbs: [String(awb)] }, {
             headers: { 'Authorization': `Bearer ${cachedToken}` }
         });
+        await logNimbus('MANIFEST_RESPONSE', response.data);
         return response.data;
     } catch (error) {
-        console.error('❌ Manifest Gen Error:', error.response?.data || error.message);
-        return { status: false, message: error.message };
+        const errData = error.response?.data || error.message;
+        console.error('❌ Manifest Gen Error:', errData);
+        await logNimbus('MANIFEST_ERROR', errData);
+        return { status: false, message: error.message, details: errData };
     }
 }
 
@@ -231,9 +237,16 @@ async function automateShipping(newOrder, address, physicalItems, paymentMethod)
             }
         }
 
-        // 6. Generate Manifest
-        console.log(`📑 Generating Manifest for AWB: ${awb}...`);
-        await generateManifest(awb);
+        // 6. Generate Manifest (Wait 2 seconds for Nimbus propagation)
+        console.log(`📑 Generating Manifest for AWB: ${awb} in 2 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const manifestResult = await generateManifest(awb);
+        if (manifestResult.status) {
+            console.log(`✅ Manifest Success: ${manifestResult.message || 'Manifested'}`);
+        } else {
+            console.warn(`⚠️ Manifest Result:`, manifestResult);
+        }
 
         return finalResult;
 

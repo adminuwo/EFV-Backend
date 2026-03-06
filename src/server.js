@@ -20,10 +20,36 @@ console.log('--- DATABASE MODE CHECK ---');
 console.log('USE_JSON_DB:', process.env.USE_JSON_DB);
 console.log('---------------------------');
 
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'https://www.efvframework.com',
+    'https://efvframework.com'
+];
+
+// Add FRONTEND_URL from env if not already present
+const envUrl = process.env.FRONTEND_URL;
+if (envUrl) {
+    const formattedUrl = envUrl.startsWith('http') ? envUrl : `https://${envUrl}`;
+    if (!allowedOrigins.includes(formattedUrl)) allowedOrigins.push(formattedUrl);
+}
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost')) {
+            callback(null, true);
+        } else {
+            console.warn('Blocked by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 app.use(express.json());
 
