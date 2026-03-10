@@ -1,22 +1,15 @@
 const { Cashfree, CFEnvironment } = require('cashfree-pg');
-
 const fs = require('fs');
 const path = require('path');
 
+// Initialize Cashfree Instance once
+const cashfree = new Cashfree();
+cashfree.XClientId = (process.env.CASHFREE_APP_ID || '').trim();
+cashfree.XClientSecret = (process.env.CASHFREE_SECRET_KEY || '').trim();
+cashfree.XEnvironment = process.env.CASHFREE_MODE === 'production' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
+
 const getCashfreeInstance = () => {
-    const environment = process.env.CASHFREE_MODE === 'production' ?
-        CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
-
-    const cf = new Cashfree(
-        environment,
-        process.env.CASHFREE_APP_ID,
-        process.env.CASHFREE_SECRET_KEY
-    );
-
-    // XApiVersion "2023-08-01" is stable and supports the current schema
-    cf.XApiVersion = "2023-08-01";
-
-    return cf;
+    return cashfree;
 };
 
 const createCashfreeOrder = async (orderData) => {

@@ -47,9 +47,9 @@ router.post('/message', async (req, res) => {
                     hi: "Home page aapki alignment yatra ki shuruat hai. Yahan 'Measure Your Alignment' tool hai aur EFV™ ka mukhya darsan (philosophy) bataya gaya hai."
                 },
                 about: {
-                    keywords: ['about', 'who', 'uwo', 'founder', 'koun', 'baare'],
-                    en: "The About page details the mission of EFV™ by UWO™. It explains our goal to elevate human Energy, Frequency, and Vibration through Alignment Intelligence.",
-                    hi: "About page EFV™ aur UWO™ ke mission ko vistaar se batata hai. Hamara lakshya Alignment Intelligence ke zariye insan ki Energy, Frequency, aur Vibration ko badhana hai."
+                    keywords: ['about', 'who', 'uwo', 'founder', 'author', 'writer', 'gurumukh', 'sir', 'creator', 'koun', 'baare', 'lekhak'],
+                    en: "EFV™ was created and written by **Gurumukh P. Ahuja**. He is the founder of UWO™ and the visionary behind the Alignment Intelligence System, designed to elevate human Energy, Frequency, and Vibration.",
+                    hi: "EFV™ के लेखक और संस्थापक **Mr. Gurumukh P. Ahuja** हैं। उन्होंने UWO™ के माध्यम से इस सिस्टम को बनाया है ताकि मनुष्य अपनी Energy, Frequency, और Vibration को बढ़ा सकें।"
                 },
                 gallery: {
                     keywords: ['gallery', 'photo', 'image', 'picture', 'tasveer', 'photo'],
@@ -136,7 +136,7 @@ router.post('/message', async (req, res) => {
 
             // Check specific volumes/books first
             for (let i = 1; i <= 9; i++) {
-                if (lowerMsg.includes(`vol ${i}`) || lowerMsg.includes(`volume ${i}`) || lowerMsg.includes(`volume ${i}`)) {
+                if (lowerMsg.includes(`vol ${i}`) || lowerMsg.includes(`volume ${i}`) || lowerMsg.includes(`pustak ${i}`) || lowerMsg.includes(`kitab ${i}`)) {
                     // Since we only detailed Vol 1 & 2 explicitly above, we can generate generic ones for 3-9 or add them to KB.
                     // For demo purposes, we'll map all specific generic volume queries if not found to a generic structure or detailed ones if added.
                     if (knowledgeBase[`vol${i}`]) {
@@ -144,12 +144,17 @@ router.post('/message', async (req, res) => {
                     } else {
                         // Fallback for Vol 3-9
                         text = isHindi
-                            ? `EFV™ Volume ${i} jald hi uplabdh hoga. Kripya Marketplace check karein.`
-                            : `EFV™ Volume ${i} is coming soon. Please check the Marketplace for updates.`;
+                            ? `EFV™ Volume ${i} जल्द ही उपलब्ध होगा। कृपया Marketplace चेक करें। इसके लेखक **Mr. Gurumukh P. Ahuja** हैं।`
+                            : `EFV™ Volume ${i} is coming soon. Please check the Marketplace for updates. It is written by **Mr. Gurumukh P. Ahuja**.`;
                         responseKey = 'found'; // Mark as found to skip loop
                     }
                     break;
                 }
+            }
+
+            // Keyword for author specifically
+            if (!responseKey && (lowerMsg.includes('writer') || lowerMsg.includes('author') || lowerMsg.includes('gurumukh') || lowerMsg.includes('sir') || lowerMsg.includes('lekhak'))) {
+                responseKey = 'about';
             }
 
             if (!responseKey || responseKey !== 'found') {

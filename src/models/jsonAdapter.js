@@ -230,5 +230,6 @@ module.exports = {
     Coupon: JsonModel.createModel('coupons.json'),
     Support: JsonModel.createModel('support.json'),
     Partner: JsonModel.createModel('partners.json'),
-    ReturnRequest: JsonModel.createModel('return_requests.json')
+    ReturnRequest: JsonModel.createModel('return_requests.json'),
+    OrderCancellation: JsonModel.createModel('order_cancellations.json')
 };

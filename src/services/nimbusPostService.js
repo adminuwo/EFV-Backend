@@ -171,12 +171,15 @@ async function automateShipping(newOrder, address, physicalItems, paymentMethod)
             address.city, address.state, address.pincode
         ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address not provided';
 
+        // Clean phone number (exactly 10 digits)
+        const cleanPhone = (address.phone || '0000000000').toString().replace(/\D/g, '').slice(-10);
+
         const nimbusPayload = {
             order_number: newOrder.orderId,
             consignee: {
                 name: address.fullName || address.name || 'Customer',
                 email: address.email,
-                phone: address.phone || '0000000000',
+                phone: cleanPhone,
                 address: addressLine,
                 city: address.city || 'Unknown',
                 state: address.state || 'Madhya Pradesh',
@@ -202,6 +205,7 @@ async function automateShipping(newOrder, address, physicalItems, paymentMethod)
             payment_type: paymentType,
             order_amount: Number(newOrder.totalAmount),
             order_total: Number(newOrder.totalAmount),
+            cash_to_be_collected: paymentType === 'cod' ? Number(newOrder.totalAmount) : 0,
             weight: Number(weight),
             length: 15, breadth: 15, height: 5,
             shipment_type: 'regular',
@@ -285,15 +289,33 @@ async function cancelShipment(awb) {
     if (!cachedToken) await login();
 
     try {
+        let payload = { awb: String(awb) };
         console.log(`🚫 Cancelling Nimbus Shipment AWB ${awb}...`);
-        await logNimbus('CANCEL_REQUEST', { awb });
+        await logNimbus('CANCEL_REQUEST', payload);
 
-        const response = await axios.post(`${NIMBUS_BASE_URL}/shipments/cancel`, { awb: [String(awb)] }, {
+        let response = await axios.post(`${NIMBUS_BASE_URL}/shipments/cancel`, payload, {
             headers: {
                 'Authorization': `Bearer ${cachedToken}`,
                 'Content-Type': 'application/json'
             }
         });
+
+        // Fallback: If "awb is required" error but we SENT awb, try plural "awbs" as string or singular in array
+        if (response.data && response.data.status === false && response.data.message?.includes('awb is required')) {
+            console.warn(`⚠️ Retrying with 'awbs' plural fix for AWB: ${awb}...`);
+            await logNimbus('CANCEL_RETRY_AWBS_PLURAL', { awbs: String(awb) });
+            response = await axios.post(`${NIMBUS_BASE_URL}/shipments/cancel`, { awbs: String(awb) }, {
+                headers: { 'Authorization': `Bearer ${cachedToken}`, 'Content-Type': 'application/json' }
+            });
+            
+            if (response.data && response.data.status === false) {
+                console.warn(`⚠️ Still fail. Retrying with 'awbs' plural ARRAY for AWB: ${awb}...`);
+                await logNimbus('CANCEL_RETRY_AWBS_ARRAY', { awbs: [String(awb)] });
+                response = await axios.post(`${NIMBUS_BASE_URL}/shipments/cancel`, { awbs: [String(awb)] }, {
+                    headers: { 'Authorization': `Bearer ${cachedToken}`, 'Content-Type': 'application/json' }
+                });
+            }
+        }
 
         await logNimbus('CANCEL_RESPONSE', response.data);
         return response.data;

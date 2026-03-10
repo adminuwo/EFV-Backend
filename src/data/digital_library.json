@@ -1,8 +1,21 @@
 [
   {
     "userId": "aditi_local_test",
-    "items": [],
-    "updatedAt": "2026-03-06T09:00:01.093Z",
+    "items": [
+      {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-09T11:43:40.326Z",
+        "orderId": "ORD-620320833",
+        "accessStatus": "active",
+        "lastChapter": 0,
+        "lastChapterTime": 1.84458
+      }
+    ],
+    "updatedAt": "2026-03-09T11:44:31.688Z",
     "_id": "mmenpmi1fsxpcblubdn",
     "createdAt": "2026-03-06T08:52:54.697Z",
     "_lastStatus": "SUCCESS"

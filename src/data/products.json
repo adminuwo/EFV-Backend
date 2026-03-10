@@ -34,7 +34,11 @@
     "description": "Explore the secrets of Energy and Alignment in an easy-to-carry paperback format.",
     "stock": 100,
     "volume": "1",
-    "language": "Hindi"
+    "language": "Hindi",
+    "$inc": {
+      "stock": -1
+    },
+    "updatedAt": "2026-03-09T11:15:48.509Z"
   },
   {
     "_id": "efv_v1_ebook",
