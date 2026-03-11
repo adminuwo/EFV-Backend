@@ -4,6 +4,7 @@ const { Order, Product, User, DigitalLibrary, Coupon } = require('../models');
 const adminAuth = require('../middleware/adminAuth');
 const { protect } = require('../middleware/auth');
 const { createCashfreeOrder, verifyCashfreePayment } = require('../utils/cashfree');
+const { createRazorpayOrder, verifyRazorpaySignature, fetchRazorpayPayment } = require('../utils/razorpay');
 const { processPartnerSale } = require('../utils/partnerUtils');
 const path = require('path');
 
@@ -32,6 +33,8 @@ router.get('/my-orders', protect, async (req, res) => {
 // Config for Frontend (Public Keys)
 router.get('/config', (req, res) => {
     res.json({
+        razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
+        // Cashfree kept for backward-compat (disabled)
         cashfreeMode: process.env.CASHFREE_MODE || 'sandbox'
     });
 });
@@ -1176,6 +1179,291 @@ router.delete('/:id', protect, async (req, res) => {
     } catch (error) {
         console.error('Delete Order Error:', error);
         res.status(500).json({ message: 'Error deleting order record' });
+    }
+});
+
+// ── RAZORPAY ────────────────────────────────────────────────────────────────
+
+// Create Razorpay Order
+router.post('/razorpay', protect, async (req, res) => {
+    try {
+        const { amount, customerName, customerEmail, customerPhone } = req.body;
+        if (!amount) return res.status(400).json({ message: 'Amount is required' });
+
+        const receipt = `EFV-RZP-${Date.now()}`;
+        const rzpOrder = await createRazorpayOrder({
+            amount : Number(amount),   // ₹ amount – util converts to paise
+            receipt: receipt,
+            notes  : {
+                customerName : customerName  || req.user.name,
+                customerEmail: customerEmail || req.user.email,
+                customerPhone: customerPhone || req.user.phone || ''
+            }
+        });
+
+        res.json({
+            rzpOrderId: rzpOrder.id,
+            amount    : rzpOrder.amount,   // paise
+            currency  : rzpOrder.currency,
+            receipt   : rzpOrder.receipt
+        });
+    } catch (error) {
+        console.error('Razorpay Create Order Error:', error);
+        res.status(500).json({
+            message: 'Failed to create Razorpay order',
+            error  : error.error ? error.error : error.message
+        });
+    }
+});
+
+// Verify Razorpay Payment & Fulfill Order
+router.post('/verify-razorpay', protect, async (req, res) => {
+    try {
+        const {
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            customer: directCustomer,
+            items   : directItems,
+            couponCode
+        } = req.body;
+
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ message: 'Missing Razorpay payment fields' });
+        }
+
+        // 1. Verify signature
+        const isValid = verifyRazorpaySignature(
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature
+        );
+
+        if (!isValid) {
+            console.warn(`⚠️ Razorpay Signature Mismatch for order: ${razorpay_order_id}`);
+            return res.status(400).json({ message: 'Payment signature verification failed' });
+        }
+
+        // 2. Prevent duplicate fulfillment
+        const existingOrder = await Order.findOne({ razorpayOrderId: razorpay_order_id });
+        if (existingOrder) {
+            return res.status(200).json({
+                success: true,
+                order  : existingOrder,
+                message: 'Order was already processed successfully'
+            });
+        }
+
+        // 3. Extra server-side check: fetch payment status from Razorpay
+        const payment = await fetchRazorpayPayment(razorpay_payment_id);
+        if (payment.status !== 'captured') {
+            return res.status(400).json({ message: `Payment not captured. Status: ${payment.status}` });
+        }
+
+        console.log(`✅ Razorpay Payment Verified: ${razorpay_payment_id} for order ${razorpay_order_id}`);
+
+        // 4. Build address & items
+        const user = await User.findOne({ email: req.user.email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const address = directCustomer ? {
+            fullName: directCustomer.name,
+            email   : directCustomer.email,
+            phone   : directCustomer.phone || user.phone || '0000000000',
+            house   : directCustomer.address || '',
+            city    : directCustomer.city    || 'Unknown',
+            state   : directCustomer.state   || '',
+            pincode : directCustomer.pincode || '000000',
+            country : directCustomer.country || 'India'
+        } : null;
+
+        if (!address) return res.status(400).json({ message: 'Shipping address missing' });
+
+        const finalItems = directItems || [];
+        if (finalItems.length === 0) return res.status(400).json({ message: 'No items in order' });
+
+        let totalAmount = 0;
+        const orderItems = [];
+
+        for (const item of finalItems) {
+            const product = await Product.findById(item.id || item.productId);
+            if (!product) continue;
+            const sellingPrice = product.price * (1 - (product.discount || 0) / 100);
+            totalAmount += sellingPrice * item.quantity;
+            orderItems.push({
+                productId: product._id,
+                title    : product.title,
+                type     : product.type,
+                price    : sellingPrice,
+                quantity : item.quantity
+            });
+        }
+
+        if (orderItems.length === 0) return res.status(400).json({ message: 'No valid products found' });
+
+        // 5. Coupon logic (mirrors Cashfree flow)
+        let discountAmount = 0;
+        let partnerRef = null;
+        let appliedCouponCode = '';
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+            if (coupon) {
+                const isExpired       = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+                const isUnderMin      = totalAmount < (coupon.minOrder || 0);
+                const isLimitReached  = coupon.usedCount >= coupon.usageLimit;
+
+                if (!isExpired && !isUnderMin && !isLimitReached) {
+                    discountAmount = coupon.type === 'Percentage'
+                        ? (totalAmount * coupon.value) / 100
+                        : coupon.value;
+                    discountAmount    = Math.min(discountAmount, totalAmount);
+                    appliedCouponCode = coupon.code;
+                    coupon.usedCount += 1;
+                    await coupon.save();
+
+                    if (coupon.isPartnerCoupon && coupon.partnerId) {
+                        partnerRef = {
+                            partnerId       : coupon.partnerId.toString(),
+                            partnerName     : coupon.partnerName || 'Unknown Partner',
+                            couponCode      : coupon.code,
+                            commissionPercent: coupon.commissionPercent,
+                            commissionAmount : Math.round((totalAmount * (coupon.commissionPercent || 0)) / 100),
+                            commissionPaid  : false
+                        };
+                    }
+                }
+            }
+        }
+
+        const finalPayable    = Math.round(totalAmount - discountAmount);
+        const isPurelyDigital = orderItems.every(i => i.type === 'EBOOK' || i.type === 'AUDIOBOOK');
+
+        // 6. Create Order record
+        const newOrder = await Order.create({
+            orderId         : 'ORD-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000),
+            userId          : user._id,
+            customer: {
+                name   : address.fullName || user.name,
+                email  : address.email    || user.email,
+                phone  : address.phone    || user.phone || '0000000000',
+                address: address,
+                city   : address.city     || '',
+                zip    : address.pincode  || ''
+            },
+            items           : orderItems,
+            totalAmount     : finalPayable,
+            discountAmount  : Math.round(discountAmount),
+            couponCode      : appliedCouponCode,
+            partnerRef      : partnerRef,
+            paymentMethod   : 'Razorpay',
+            paymentStatus   : 'Paid',
+            status          : isPurelyDigital ? 'Completed (Digital)' : 'Processing',
+            orderType       : isPurelyDigital ? 'digital' : 'physical',
+            razorpayOrderId : razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            timeline        : [{
+                status: isPurelyDigital ? 'Completed (Digital)' : 'Paid',
+                note  : isPurelyDigital
+                    ? 'Digital Product Purchased & Unlocked'
+                    : `Payment verified via Razorpay (${razorpay_payment_id})`
+            }]
+        });
+
+        // 7. Unlock Digital Items
+        const digitalItems = [];
+        for (const item of orderItems) {
+            if (item.type === 'EBOOK' || item.type === 'AUDIOBOOK') {
+                const product = await Product.findById(item.productId);
+                if (product) {
+                    digitalItems.push({
+                        productId   : product._id,
+                        title       : product.title,
+                        type        : product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                        thumbnail   : product.thumbnail,
+                        filePath    : product.filePath,
+                        purchasedAt : new Date(),
+                        orderId     : newOrder.orderId,
+                        accessStatus: 'active'
+                    });
+                }
+            }
+        }
+
+        if (digitalItems.length > 0) {
+            await DigitalLibrary.findOneAndUpdate(
+                { userId: user._id.toString() },
+                (lib) => {
+                    if (!lib) return { userId: user._id.toString(), items: digitalItems, updatedAt: new Date().toISOString() };
+                    if (!lib.items) lib.items = [];
+                    digitalItems.forEach(di => {
+                        if (!lib.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
+                            lib.items.push(di);
+                        }
+                    });
+                    lib.updatedAt = new Date().toISOString();
+                    return lib;
+                },
+                { upsert: true }
+            );
+        }
+
+        // 8. Notification
+        try {
+            if (!user.notifications) user.notifications = [];
+            user.notifications.unshift({
+                _id    : 'purchase-rzp-' + Date.now(),
+                title  : isPurelyDigital ? 'Content Unlocked! 📖' : 'Purchase Successful! 🎉',
+                message: isPurelyDigital
+                    ? `Your digital products from order #${newOrder.orderId} are now available in My Library.`
+                    : `Thank you for your order ${newOrder.orderId}. Your items are being processed.`,
+                type   : 'Order',
+                link   : isPurelyDigital ? 'profile.html?tab=library' : 'profile.html?tab=orders',
+                isRead : false,
+                createdAt: new Date().toISOString()
+            });
+            user.updatedAt = new Date().toISOString();
+            await user.save();
+        } catch (noteErr) {}
+
+        // 9. Auto-Shipping for Physical Items
+        const physicalItems = orderItems.filter(i => i.type === 'HARDCOVER' || i.type === 'PAPERBACK');
+        if (physicalItems.length > 0) {
+            try {
+                const nimbusPostService = require('../services/nimbusPostService');
+                const { Shipment } = require('../models');
+                const shipResult = await nimbusPostService.automateShipping(newOrder, address, physicalItems, 'prepaid');
+
+                if (shipResult.status) {
+                    newOrder.shipmentId   = shipResult.shipmentId;
+                    newOrder.awbNumber    = shipResult.awbNumber;
+                    newOrder.courierName  = shipResult.courierName;
+                    newOrder.trackingLink = shipResult.trackingLink;
+                    newOrder.labelUrl     = shipResult.labelUrl;
+                    newOrder.timeline.push({ status: 'Shipped', note: `Shipment automated via ${shipResult.courierName}. AWB: ${shipResult.awbNumber}` });
+                    await newOrder.save();
+                    await Shipment.create({
+                        orderId       : newOrder._id.toString(),
+                        shipmentId    : shipResult.shipmentId,
+                        awbNumber     : shipResult.awbNumber,
+                        courierName   : shipResult.courierName,
+                        labelUrl      : shipResult.labelUrl,
+                        trackingLink  : shipResult.trackingLink,
+                        shippingStatus: 'Processing'
+                    });
+                }
+            } catch (shipErr) { console.error('❌ Nimbus Automation for Razorpay order failed:', shipErr); }
+        }
+
+        if (newOrder.partnerRef) {
+            await processPartnerSale(newOrder, newOrder.partnerRef);
+        }
+
+        res.status(201).json({ success: true, order: newOrder, message: 'Payment verified and order placed' });
+
+    } catch (error) {
+        console.error('Razorpay Verify Error:', error);
+        res.status(500).json({ message: 'Payment verification failed' });
     }
 });
 

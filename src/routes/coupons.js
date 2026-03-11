@@ -24,10 +24,11 @@ router.post('/', adminAuth, async (req, res) => {
             value,
             minOrder,
             expiryDate,
-            usageLimit,
+            usageLimit: usageLimit || 1000,
             isPartnerCoupon,
             partnerId,
             partnerName,
+            isActive: true, // Explicitly set active
             commissionPercent: isPartnerCoupon ? (commissionPercent || 0) : 0
         };
 

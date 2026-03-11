@@ -9,7 +9,8 @@
     "commissionPercent": "10",
     "_id": "mm94m8hqnnzmvkcunwg",
     "createdAt": "2026-03-02T11:59:32.990Z",
-    "updatedAt": "2026-03-02T11:59:32.990Z"
+    "updatedAt": "2026-03-11T06:05:00.000Z",
+    "isActive": true
   },
   {
     "code": "EFV02",
@@ -21,6 +22,104 @@
     "commissionPercent": "20",
     "_id": "mma6o3u2bal16w3qxwd",
     "createdAt": "2026-03-03T05:44:45.674Z",
-    "updatedAt": "2026-03-03T05:44:45.674Z"
+    "updatedAt": "2026-03-11T06:05:00.000Z",
+    "isActive": true
+  },
+  {
+    "code": "DEVANSH-EFV-3825",
+    "type": "Percentage",
+    "value": "3",
+    "isPartnerCoupon": true,
+    "partnerId": "mmlm45w2ds6x70t3o7",
+    "partnerName": "devansh",
+    "commissionPercent": "2",
+    "_id": "mmlmtkpvd0r50gc0jgg",
+    "createdAt": "2026-03-11T06:02:22.627Z",
+    "updatedAt": "2026-03-11T06:02:22.627Z",
+    "isActive": false
+  },
+  {
+    "code": "ABHA-EFV-2727",
+    "type": "Percentage",
+    "value": "10",
+    "usageLimit": 1000,
+    "isPartnerCoupon": true,
+    "partnerId": "mmlyslatmsmlfno6qx",
+    "partnerName": "abha",
+    "isActive": false,
+    "commissionPercent": "20",
+    "_id": "mmlysztalfep08eguv7",
+    "createdAt": "2026-03-11T11:37:50.926Z",
+    "updatedAt": "2026-03-11T11:37:50.926Z"
+  },
+  {
+    "code": "ABHA-EFV-2727",
+    "type": "Percentage",
+    "value": "10",
+    "usageLimit": 1000,
+    "isPartnerCoupon": true,
+    "partnerId": "mmlyslatmsmlfno6qx",
+    "partnerName": "abha",
+    "isActive": false,
+    "commissionPercent": "20",
+    "_id": "mmlyty8nfed3l1h0he",
+    "createdAt": "2026-03-11T11:38:35.543Z",
+    "updatedAt": "2026-03-11T11:38:35.543Z"
+  },
+  {
+    "code": "ABHA-EFV-1190",
+    "type": "Percentage",
+    "value": "10",
+    "usageLimit": 1000,
+    "isPartnerCoupon": true,
+    "partnerId": "mmlzc166py278ydes4",
+    "partnerName": "abha",
+    "isActive": false,
+    "commissionPercent": "20",
+    "_id": "mmlzf9hqpivah9a3ugb",
+    "createdAt": "2026-03-11T11:55:09.902Z",
+    "updatedAt": "2026-03-11T11:55:09.902Z"
+  },
+  {
+    "code": "ABHA-EFV-3198",
+    "type": "Percentage",
+    "value": "10",
+    "usageLimit": 1000,
+    "isPartnerCoupon": true,
+    "partnerId": "mmm00nd6na4eo7o97c",
+    "partnerName": "abha",
+    "isActive": false,
+    "commissionPercent": "20",
+    "_id": "mmm00zqkqtrmapqwgna",
+    "createdAt": "2026-03-11T12:12:03.692Z",
+    "updatedAt": "2026-03-11T12:12:03.692Z"
+  },
+  {
+    "code": "ABHA-EFV-3198",
+    "type": "Percentage",
+    "value": "10",
+    "usageLimit": 1000,
+    "isPartnerCoupon": true,
+    "partnerId": "mmm00nd6na4eo7o97c",
+    "partnerName": "abha",
+    "isActive": false,
+    "commissionPercent": "20",
+    "_id": "mmm01khyq6w2o0lc6yh",
+    "createdAt": "2026-03-11T12:12:30.598Z",
+    "updatedAt": "2026-03-11T12:12:30.598Z"
+  },
+  {
+    "code": "ABHAA-EFV-306",
+    "type": "Percentage",
+    "value": "10",
+    "usageLimit": 1000,
+    "isPartnerCoupon": true,
+    "partnerId": "mmm0er40kabhxqrru",
+    "partnerName": "abhaa",
+    "isActive": true,
+    "commissionPercent": "20",
+    "_id": "mmm0f0cuczbq8qtndd6",
+    "createdAt": "2026-03-11T12:22:57.678Z",
+    "updatedAt": "2026-03-11T12:22:57.678Z"
   }
 ]

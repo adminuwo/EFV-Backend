@@ -507,5 +507,55 @@
     "courierName": "Blue dart",
     "trackingLink": "https://nimbuspost.com/track/76873449166",
     "labelUrl": "https://nimubs-assets.s3.amazonaws.com/labels/20260310132601-2553702495.pdf"
+  },
+  {
+    "orderId": "EFV-177320854991540",
+    "userId": "mmf0bije7rxas7otpd",
+    "customer": {
+      "name": "Deepak Kumar Dhamecha",
+      "email": "devansh@uwo24.com",
+      "phone": "9329243000",
+      "address": "House Number 8 , Block A, Vikas Vihar Colony , Behind Om Hospital, Mahadev Ghat Road",
+      "city": "Raipur",
+      "state": "Chhattisgarh",
+      "country": "India",
+      "pincode": "492013"
+    },
+    "items": [
+      {
+        "productId": "efv_v1_hardcover",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "HARDCOVER",
+        "price": 499,
+        "quantity": 1
+      }
+    ],
+    "totalAmount": 589,
+    "shippingCharges": 42.48,
+    "codCharges": 47.7576,
+    "discountAmount": 0,
+    "paymentMethod": "COD",
+    "paymentStatus": "Pending",
+    "status": "Processing",
+    "couponCode": "",
+    "partnerRef": null,
+    "timeline": [
+      {
+        "status": "Order Placed",
+        "note": "Order placed via Cash on Delivery"
+      },
+      {
+        "status": "Shipped",
+        "note": "COD Shipment automated via Blue dart. AWB: 77720650405"
+      }
+    ],
+    "_id": "mmlml5qc49mu54gatyc",
+    "createdAt": "2026-03-11T05:55:49.957Z",
+    "updatedAt": "2026-03-11T05:55:55.786Z",
+    "shipmentId": 78395225,
+    "awbNumber": "77720650405",
+    "courierName": "Blue dart",
+    "trackingLink": "https://nimbuspost.com/track/77720650405",
+    "labelUrl": "https://nimubs-assets.s3.amazonaws.com/labels/20260311112556-2553708371.pdf"
   }
 ]

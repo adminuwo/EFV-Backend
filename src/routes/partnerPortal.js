@@ -127,6 +127,7 @@ router.post('/setup-password', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         partner.password = await bcrypt.hash(password, salt);
         partner.isActivated = true;
+        partner.status = 'Verified'; // Updated to Verified
         partner.otp = null;
         partner.otpExpires = null;
         await partner.save();
@@ -195,10 +196,24 @@ router.get('/dashboard', partnerAuth, async (req, res) => {
             .filter(o => !o.partnerRef.commissionPaid)
             .reduce((sum, o) => sum + (o.partnerRef.commissionAmount || 0), 0);
 
+        // Fetch linked coupon - Use string comparison for IDs
+        const partnerIdStr = partner._id.toString();
+        console.log(`🔍 Dashboard: Fetching coupon for partnerId: ${partnerIdStr}`);
+        
+        const coupons = await Coupon.find({ partnerId: partnerIdStr });
+        const coupon = coupons.find(c => c.isActive !== false); // Find first active or implicitly active
+        
+        if (coupon) {
+            console.log(`✅ Coupon found: ${coupon.code}`);
+        } else {
+            console.log(`⚠️ No active coupon found for partner: ${partner.name}`);
+        }
+
         res.json({
             partner: {
                 name: partner.name,
-                company: partner.company
+                company: partner.company,
+                partner_token: partner.partner_token
             },
             stats: {
                 totalSales,
@@ -206,6 +221,12 @@ router.get('/dashboard', partnerAuth, async (req, res) => {
                 totalCommissionEarned,
                 unpaidCommission
             },
+            coupon: coupon ? {
+                code: coupon.code,
+                value: coupon.value,
+                type: coupon.type,
+                commissionPercent: coupon.commissionPercent
+            } : null,
             sales: orders.map(o => ({
                 orderId: o.orderId,
                 customerName: o.customer.name,

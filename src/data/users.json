@@ -170,6 +170,14 @@
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocI8Ui6FKS9g2DM0CexSi4iqdtr191Mh09Morp6fnKoghbsIjA=s96-c",
     "notifications": [
       {
+        "_id": "purchase-cod-1773208555796",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-177320854991540 has been placed via COD. Total: ₹589.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "createdAt": "2026-03-11T05:55:55.796Z"
+      },
+      {
         "_id": "welcome-google-1772808351384",
         "type": "Digital",
         "title": "Welcome, Devansh Tantway! 🚀",
@@ -180,6 +188,26 @@
     ],
     "_id": "mmf0bije7rxas7otpd",
     "createdAt": "2026-03-06T14:45:51.386Z",
-    "updatedAt": "2026-03-06T14:45:51.386Z"
+    "updatedAt": "2026-03-11T05:55:55.797Z"
+  },
+  {
+    "name": "Test User",
+    "email": "test@example.com",
+    "phone": "1234567890",
+    "password": "$2a$10$bDg5iDN8RunBHDff3taGuesCiwdtVGoABPbnw.BT5fatKyLEaZhhu",
+    "role": "user",
+    "notifications": [
+      {
+        "_id": "welcome-new-1773227826402",
+        "type": "Digital",
+        "title": "Welcome to EFV, Test User! 🚀",
+        "message": "Your journey starts here. Explore our marketplace and build your personal library.",
+        "isRead": false,
+        "createdAt": "2026-03-11T11:17:06.402Z"
+      }
+    ],
+    "_id": "mmly2bj8idk4qa58wb",
+    "createdAt": "2026-03-11T11:17:06.404Z",
+    "updatedAt": "2026-03-11T11:17:06.404Z"
   }
 ]

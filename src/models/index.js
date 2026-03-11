@@ -278,6 +278,9 @@ const partnerSchema = new mongoose.Schema({
     phone: { type: String, default: '' },
     company: { type: String, default: '' },
     password: { type: String, default: '' }, // Set during activation
+    token: { type: String, default: '' }, // Invitation token/Unique ID
+    partner_token: { type: String, default: '' }, // Generated marketing token
+    status: { type: String, default: 'Active' }, // Active, Verified
     notes: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     isActivated: { type: Boolean, default: false }, // Email verified & password set

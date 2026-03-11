@@ -36,19 +36,27 @@ if (envUrl) {
     if (!allowedOrigins.includes(formattedUrl)) allowedOrigins.push(formattedUrl);
 }
 
+app.use((req, res, next) => {
+    const logStr = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin} - Referer: ${req.headers.referer} - Auth: ${req.headers.authorization ? 'Present' : 'Missing'}\n`;
+    console.log(logStr);
+    try {
+        require('fs').appendFileSync(require('path').join(__dirname, 'data', 'requests.log'), logStr);
+    } catch (e) {}
+    next();
+});
+
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost')) {
+        // Allow all localhost origins during development
+        if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             console.warn('Blocked by CORS:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true
 }));
 app.use(express.json());
