@@ -11,9 +11,9 @@
     "isActivated": true,
     "_id": "mmm0er40kabhxqrru",
     "createdAt": "2026-03-11T12:22:45.696Z",
-    "updatedAt": "2026-03-11T12:23:48.660Z",
-    "otp": null,
-    "otpExpires": null,
+    "updatedAt": "2026-03-12T05:43:49.972Z",
+    "otp": "$2a$10$oytNLGQ/KUXF/ccxs3zm0eUEiOXTOALb2806Kr0.2/QMe5G7LoD8G",
+    "otpExpires": "2026-03-12T05:48:49.971Z",
     "password": "$2a$10$OwPALDv2C0/XF8VxfUUA1OkUquuD6JmoDaefbU5pFK1zs8nss7kdK"
   }
 ]

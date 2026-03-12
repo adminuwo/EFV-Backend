@@ -324,11 +324,25 @@ const returnRequestSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const partnerMessageSchema = new mongoose.Schema({
+    partnerId: { type: String, required: true },
+    partnerName: String,
+    partnerEmail: String,
+    subject: String,
+    message_text: { type: String, required: true },
+    sender_type: { type: String, enum: ['admin', 'partner'], required: true },
+    status: { type: String, enum: ['Open', 'Resolved'], default: 'Open' },
+    isReadByAdmin: { type: Boolean, default: false },
+    isReadByPartner: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+
 const orderCancellationSchema = new mongoose.Schema({
     orderId: { type: String, required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    reason: { type: String, default: 'User requested cancellation' },
-    cancelledAt: { type: Date, default: Date.now }
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reason: String,
+    cancelledAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = {
@@ -346,6 +360,7 @@ module.exports = {
     Support: mongoose.model('Support', supportSchema),
     Partner: mongoose.model('Partner', partnerSchema),
     PartnerSale: mongoose.model('PartnerSale', partnerSaleSchema),
+    PartnerMessage: mongoose.model('PartnerMessage', partnerMessageSchema),
     ReturnRequest: mongoose.model('ReturnRequest', returnRequestSchema),
     OrderCancellation: mongoose.model('OrderCancellation', orderCancellationSchema)
 };

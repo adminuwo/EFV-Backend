@@ -1,6 +1,8 @@
 require("dotenv").config();
 
 const express = require('express');
+const dns = require('node:dns');
+dns.setDefaultResultOrder('ipv4first');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -100,6 +102,7 @@ app.use('/api/shipments', require('./routes/shipments'));
 app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/partners', require('./routes/partners'));
 app.use('/api/partner-portal', require('./routes/partnerPortal'));
+app.use('/api/partner-messages', require('./routes/partnerMessages'));
 app.use('/api/support', require('./routes/support'));
 app.use('/api/audiobook-progress', require('./routes/audiobookProgress'));
 app.use("/api/nimbus", nimbusShipping);

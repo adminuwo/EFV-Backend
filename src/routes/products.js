@@ -16,7 +16,19 @@ router.get('/', async (req, res) => {
 // Get single product (Public)
 router.get('/:id', async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id);
+        let product = null;
+        const id = req.params.id;
+
+        // Try as MongoDB ObjectId first, then fall back to legacyId
+        const isObjectId = /^[a-f\d]{24}$/i.test(id);
+        if (isObjectId) {
+            product = await Product.findById(id);
+        }
+        // If not found by ObjectId (or it's a string ID like "efv_v1_audiobook"), try legacyId
+        if (!product) {
+            product = await Product.findOne({ legacyId: id });
+        }
+
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }

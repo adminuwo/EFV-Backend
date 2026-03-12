@@ -16,7 +16,7 @@ const generateToken = (id) => {
  */
 router.post('/otp', async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, force } = req.body;
         if (!email) return res.status(400).json({ message: 'Email is required' });
 
         const partner = await Partner.findOne({ email });
@@ -26,6 +26,15 @@ router.post('/otp', async (req, res) => {
 
         if (!partner.isActive) {
             return res.status(403).json({ message: 'This partner account is currently disabled.' });
+        }
+
+        // Check if user is already activated (has password)
+        if (partner.isActivated && partner.password && !force) {
+            return res.json({ 
+                status: 'activated', 
+                message: 'Account already verified. Please enter your password.',
+                isActivated: true 
+            });
         }
 
         // Generate 6-digit OTP

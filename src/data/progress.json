@@ -3,12 +3,12 @@
     "userId": "aditi_local_test",
     "productId": "efv_v1_audiobook",
     "type": "AUDIOBOOK",
-    "progress": 0.008801285154632642,
-    "currentTime": 1.84458,
+    "progress": 0.020986616689202865,
+    "currentTime": 4.398391,
     "totalDuration": 911.22068,
-    "lastUpdated": 1773056671697,
+    "lastUpdated": 1773303129528,
     "_id": "mmenta1llzykd4xstx",
     "createdAt": "2026-03-06T08:55:45.177Z",
-    "updatedAt": "2026-03-09T11:44:31.698Z"
+    "updatedAt": "2026-03-12T08:12:09.529Z"
   }
 ]

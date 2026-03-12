@@ -29,7 +29,19 @@ const getMimeType = (filePath) => {
     return map[ext] || 'application/octet-stream';
 };
 
-// Helper: stream a file with range support
+// Helper: Find product by ObjectId or legacyId (string)
+async function findProductById(id) {
+    const isObjectId = /^[a-f\d]{24}$/i.test(id);
+    let product = null;
+    if (isObjectId) {
+        product = await Product.findById(id);
+    }
+    if (!product) {
+        product = await Product.findOne({ legacyId: id });
+    }
+    return product;
+}
+
 const streamAudioFile = (filePath, req, res) => {
     if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Audio file not found' });
 
@@ -73,7 +85,7 @@ const streamAudioFile = (filePath, req, res) => {
 // Secure E-Book Streaming
 router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
     try {
-        const product = await Product.findById(req.params.productId);
+        const product = await findProductById(req.params.productId);
         if (!product || product.type !== 'EBOOK') {
             return res.status(404).json({ message: 'E-Book not found' });
         }
@@ -81,7 +93,7 @@ router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
         const uploadStore = path.join(__dirname, '../');
         const fullPath = path.resolve(uploadStore, product.filePath);
 
-        if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File not found' });
+        if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File not found on server' });
 
         res.setHeader('Content-Type', getMimeType(product.filePath));
         res.setHeader('Content-Disposition', 'inline');
@@ -96,7 +108,7 @@ router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
 // Secure Audiobook Streaming (legacy single-file)
 router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
     try {
-        const product = await Product.findById(req.params.productId);
+        const product = await findProductById(req.params.productId);
         if (!product || product.type !== 'AUDIOBOOK') {
             return res.status(404).json({ message: 'Audiobook not found' });
         }
@@ -115,7 +127,7 @@ router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
 // Streams a specific chapter's audio. chapterIndex is 0-based.
 router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async (req, res) => {
     try {
-        const product = await Product.findById(req.params.productId);
+        const product = await findProductById(req.params.productId);
         if (!product || product.type !== 'AUDIOBOOK') {
             return res.status(404).json({ message: 'Audiobook not found' });
         }

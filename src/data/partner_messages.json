@@ -1,0 +1,72 @@
+[
+  {
+    "partnerId": "mmm0er40kabhxqrru",
+    "partnerName": "abhaa",
+    "partnerEmail": "abha@uwo24.com",
+    "subject": "hello",
+    "message_text": "okayyyy",
+    "sender_type": "partner",
+    "status": "Open",
+    "isReadByAdmin": true,
+    "isReadByPartner": true,
+    "createdAt": "2026-03-12T06:18:08.967Z",
+    "_id": "mmn2tpl3ki602defmu",
+    "updatedAt": "2026-03-12T06:18:08.967Z"
+  },
+  {
+    "partnerId": "mmm0er40kabhxqrru",
+    "partnerName": "abhaa",
+    "partnerEmail": "abha@uwo24.com",
+    "subject": "hello",
+    "message_text": "doneee",
+    "sender_type": "admin",
+    "status": "Open",
+    "isReadByAdmin": true,
+    "isReadByPartner": true,
+    "createdAt": "2026-03-12T06:18:20.949Z",
+    "_id": "mmn2tytxoqwtpqqgs5m",
+    "updatedAt": "2026-03-12T06:18:20.949Z"
+  },
+  {
+    "partnerId": "mmm0er40kabhxqrru",
+    "partnerName": "abhaa",
+    "partnerEmail": "abha@uwo24.com",
+    "subject": "hhhbjk",
+    "message_text": "cdfcdcfcf\n",
+    "sender_type": "partner",
+    "status": "Open",
+    "isReadByAdmin": true,
+    "isReadByPartner": true,
+    "createdAt": "2026-03-12T06:18:39.900Z",
+    "_id": "mmn2udgcxr36out99fc",
+    "updatedAt": "2026-03-12T06:18:39.900Z"
+  },
+  {
+    "partnerId": "mmm0er40kabhxqrru",
+    "partnerName": "abhaa",
+    "partnerEmail": "abha@uwo24.com",
+    "subject": "hello",
+    "message_text": "gtbtbtbt",
+    "sender_type": "admin",
+    "status": "Open",
+    "isReadByAdmin": true,
+    "isReadByPartner": true,
+    "createdAt": "2026-03-12T06:18:50.246Z",
+    "_id": "mmn2ulfq5xsbsgar017",
+    "updatedAt": "2026-03-12T06:18:50.246Z"
+  },
+  {
+    "partnerId": "mmm0er40kabhxqrru",
+    "partnerName": "abhaa",
+    "partnerEmail": "abha@uwo24.com",
+    "subject": "hello",
+    "message_text": "tbttbgtth",
+    "sender_type": "admin",
+    "status": "Open",
+    "isReadByAdmin": true,
+    "isReadByPartner": false,
+    "createdAt": "2026-03-12T06:19:08.509Z",
+    "_id": "mmn2uzj1zoufixthey",
+    "updatedAt": "2026-03-12T06:19:08.509Z"
+  }
+]

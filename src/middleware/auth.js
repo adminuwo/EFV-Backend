@@ -53,10 +53,25 @@ const validatePurchase = async (req, res, next) => {
             return next();
         }
 
-        // 2. Check Purchase History
+        // 2. Resolve the MongoDB product ID (may be a legacy string like "efv_v1_audiobook")
+        let resolvedProductId = productId;
+        const isObjectId = /^[a-f\d]{24}$/i.test(productId);
+        if (!isObjectId) {
+            // It's a legacy string ID — find the product's MongoDB _id
+            const { Product } = require('../models');
+            const product = await Product.findOne({ legacyId: productId });
+            if (product) {
+                resolvedProductId = product._id.toString();
+            }
+            // Keep original string for legacy JSON DB purchase lookup too
+        }
+
+        // 3. Check Purchase History (try both legacy and resolved ID)
         const purchase = await Purchase.findOne({
-            userId: userId,
-            productId: productId
+            $or: [
+                { userId: userId, productId: resolvedProductId },
+                { userId: userId, productId: productId }
+            ]
         });
 
         if (purchase) {
@@ -64,16 +79,26 @@ const validatePurchase = async (req, res, next) => {
             return next();
         }
 
-        // 3. Digital Library
+        // 4. Digital Library
         const library = await DigitalLibrary.findOne({ userId: userId });
         if (library && library.items) {
             const hasAccess = library.items.some(item => {
                 const itemProdId = item.productId || item.id || item._id;
-                return itemProdId && itemProdId.toString() === productId.toString();
+                if (!itemProdId) return false;
+                const itemStr = itemProdId.toString();
+                return itemStr === productId || itemStr === resolvedProductId;
             });
 
             if (hasAccess) {
                 debugLog(`GRANT: Library entry found for ${userEmail} -> ${productId}`);
+                return next();
+            }
+        }
+
+        // 5. Also check user's purchasedProducts array (legacy field)
+        if (req.user.purchasedProducts && Array.isArray(req.user.purchasedProducts)) {
+            if (req.user.purchasedProducts.includes(productId) || req.user.purchasedProducts.includes(resolvedProductId)) {
+                debugLog(`GRANT: purchasedProducts array match for ${userEmail} -> ${productId}`);
                 return next();
             }
         }
