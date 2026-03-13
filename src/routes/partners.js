@@ -27,9 +27,13 @@ router.get('/', adminAuth, async (req, res) => {
                 .filter(o => !o.partnerRef.commissionPaid)
                 .reduce((sum, o) => sum + (o.partnerRef.commissionAmount || 0), 0);
 
-            // Fetch all coupons for this partner
+            // Fetch all coupons for this partner using flexible ID matching
+            const partnerIdStr = (partnerObj._id || partnerObj.id).toString();
             const allCoupons = await Coupon.find({ 
-                partnerId: (partnerObj._id || partnerObj.id).toString()
+                $or: [
+                    { partnerId: partnerIdStr },
+                    { partnerId: partner._id } // Also try direct ObjectId if supported
+                ]
             });
             
             // Debug: Log found counts
@@ -37,7 +41,8 @@ router.get('/', adminAuth, async (req, res) => {
             
             // Filter for active ones in JS to be 100% sure about the boolean/string comparison
             const hasActiveCoupon = allCoupons.some(c => 
-                c.isActive === true || String(c.isActive) === 'true'
+                (c.isActive === true || String(c.isActive) === 'true') && 
+                (c.code.trim().toUpperCase() === (partnerObj.partner_token || '').trim().toUpperCase())
             );
 
             return {

@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
     }],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     notifications: [{
+        _id: { type: String }, // Allow custom string IDs to prevent BSONError
         title: String,
         message: String,
         type: { type: String, enum: ['Order', 'Payment', 'Digital', 'Shipment', 'General'], default: 'General' },

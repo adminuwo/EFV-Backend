@@ -18,8 +18,8 @@ router.get('/profile', protect, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Create a copy to modify for response
-        const userObj = { ...user };
+        // Use toObject() to get a clean JS object from Mongoose document
+        const userObj = user.toObject();
         delete userObj.password;
 
         // Ensure notifications have IDs for frontend tracking

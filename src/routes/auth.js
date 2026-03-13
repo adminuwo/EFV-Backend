@@ -43,7 +43,6 @@ router.post('/register', async (req, res) => {
             password: hashedPassword,
             role: 'user',
             notifications: [{
-                _id: 'welcome-new-' + Date.now(),
                 type: 'Digital',
                 title: `Welcome to EFV, ${name}! 🚀`,
                 message: "Your journey starts here. Explore our marketplace and build your personal library.",
@@ -100,7 +99,6 @@ router.post('/login', async (req, res) => {
         );
         if (!hasWelcome) {
             user.notifications.unshift({
-                _id: 'welcome-' + Date.now(),
                 type: 'Digital',
                 title: `Welcome to EFV, ${user.name}! 🚀`,
                 message: "Your journey starts here. Explore our marketplace and build your personal library.",
@@ -162,7 +160,13 @@ router.put('/change-password', require('../middleware/auth').protect, async (req
 router.post('/google', async (req, res) => {
     try {
         const { idToken } = req.body;
-        if (!idToken) return res.status(400).json({ message: 'Token is required' });
+        console.log('Received Google Token attempt...');
+        if (!idToken) {
+            console.warn('No idToken received');
+            return res.status(400).json({ message: 'Token is required' });
+        }
+
+        console.log('Verifying with Client ID:', process.env.GOOGLE_CLIENT_ID);
 
         const ticket = await client.verifyIdToken({
             idToken,
@@ -170,6 +174,7 @@ router.post('/google', async (req, res) => {
         });
 
         const payload = ticket.getPayload();
+        console.log('Google Payload:', payload.email);
         const { sub: googleId, email, name, picture } = payload;
 
         // Check if user exists
@@ -185,7 +190,6 @@ router.post('/google', async (req, res) => {
                 googleId,
                 avatar: picture,
                 notifications: [{
-                    _id: 'welcome-google-' + Date.now(),
                     type: 'Digital',
                     title: `Welcome, ${name}! 🚀`,
                     message: "You've successfully connected with Google. Explore your secure library.",
@@ -205,7 +209,6 @@ router.post('/google', async (req, res) => {
             );
             if (!hasWelcome) {
                 user.notifications.unshift({
-                    _id: 'welcome-google-' + Date.now(),
                     type: 'Digital',
                     title: `Welcome, ${user.name}! 🚀`,
                     message: "You've successfully connected with Google. Explore your secure library.",
@@ -259,7 +262,8 @@ router.post('/forgot-password', async (req, res) => {
         const { email } = req.body;
         if (!email) return res.status(400).json({ message: 'Email is required' });
 
-        const user = await User.findOne({ email });
+        const searchEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: searchEmail });
 
         // Security: Always return success even if user not found
         const successResponse = { message: 'If your email is registered, a reset code has been sent.' };
@@ -308,7 +312,10 @@ router.post('/forgot-password', async (req, res) => {
 
     } catch (error) {
         console.error('Forgot Pass Error:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        try {
+            require('fs').appendFileSync(require('path').join(__dirname, '../data/auth_debug.log'), `[${new Date().toISOString()}] Forgot Pass Error: ${error.message}\n${error.stack}\n`);
+        } catch (e) {}
+        res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 });
 
@@ -318,7 +325,8 @@ router.post('/verify-reset-otp', async (req, res) => {
         const { email, otp } = req.body;
         if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
 
-        const user = await User.findOne({ email });
+        const searchEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: searchEmail });
         if (!user || !user.resetPasswordOTP || !user.resetPasswordExpires) {
             return res.status(400).json({ message: 'Invalid or expired reset request' });
         }

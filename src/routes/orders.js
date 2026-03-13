@@ -92,37 +92,34 @@ router.post('/', async (req, res) => {
         let appliedCouponCode = '';
 
         if (couponCode) {
-            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+            const cleanedCode = (couponCode || '').trim().toUpperCase();
+            const coupon = await Coupon.findOne({ code: cleanedCode, isActive: true });
+            
             if (coupon) {
-                // Validate coupon (basic check, more thorough check should be done on frontend too)
                 const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
                 const isUnderMin = totalAmount < (coupon.minOrder || 0);
-                const isLimitReached = coupon.usedCount >= coupon.usageLimit;
+                const isLimitReached = (coupon.usedCount || 0) >= (coupon.usageLimit || 1000);
 
                 if (!isExpired && !isUnderMin && !isLimitReached) {
-                    if (coupon.type === 'Percentage') {
-                        discountAmount = (totalAmount * coupon.value) / 100;
-                    } else {
-                        discountAmount = coupon.value;
-                    }
-
-                    // Cap discount to total amount
+                    discountAmount = coupon.type === 'Percentage'
+                        ? (totalAmount * (coupon.value || 0)) / 100
+                        : (coupon.value || 0);
+                    
                     discountAmount = Math.min(discountAmount, totalAmount);
                     appliedCouponCode = coupon.code;
 
-                    // Update used count
-                    coupon.usedCount += 1;
+                    // Update usage
+                    coupon.usedCount = (coupon.usedCount || 0) + 1;
                     await coupon.save();
 
                     // If it's a partner coupon, associate with the order
                     if (coupon.isPartnerCoupon && coupon.partnerId) {
-                        const commissionAmount = (totalAmount * (coupon.commissionPercent || 0)) / 100;
                         partnerRef = {
                             partnerId: coupon.partnerId.toString(),
                             partnerName: coupon.partnerName || 'Unknown Partner',
                             couponCode: coupon.code,
-                            commissionPercent: coupon.commissionPercent,
-                            commissionAmount: Math.round(commissionAmount),
+                            commissionPercent: (coupon.commissionPercent || 0),
+                            commissionAmount: Math.round((totalAmount * (coupon.commissionPercent || 0)) / 100),
                             commissionPaid: false
                         };
                     }
@@ -306,17 +303,22 @@ router.post('/verify-cashfree', protect, async (req, res) => {
         let appliedCouponCode = '';
 
         if (couponCode) {
-            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+            const cleanedCode = (couponCode || '').trim().toUpperCase();
+            const coupon = await Coupon.findOne({ code: cleanedCode, isActive: true });
             if (coupon) {
                 const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
                 const isUnderMin = totalAmount < (coupon.minOrder || 0);
                 const isLimitReached = coupon.usedCount >= coupon.usageLimit;
 
                 if (!isExpired && !isUnderMin && !isLimitReached) {
-                    discountAmount = coupon.type === 'Percentage' ? (totalAmount * coupon.value) / 100 : coupon.value;
+                    discountAmount = coupon.type === 'Percentage'
+                        ? (totalAmount * (coupon.value || 0)) / 100
+                        : (coupon.value || 0);
                     discountAmount = Math.min(discountAmount, totalAmount);
                     appliedCouponCode = coupon.code;
-                    coupon.usedCount += 1;
+
+                    // Increment used count for Cashfree orders
+                    coupon.usedCount = (coupon.usedCount || 0) + 1;
                     await coupon.save();
 
                     if (coupon.isPartnerCoupon && coupon.partnerId) {
@@ -324,7 +326,7 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                             partnerId: coupon.partnerId.toString(),
                             partnerName: coupon.partnerName || 'Unknown Partner',
                             couponCode: coupon.code,
-                            commissionPercent: coupon.commissionPercent,
+                            commissionPercent: (coupon.commissionPercent || 0),
                             commissionAmount: Math.round((totalAmount * (coupon.commissionPercent || 0)) / 100),
                             commissionPaid: false
                         };
@@ -522,18 +524,41 @@ router.post('/cod', protect, async (req, res) => {
         let pRef = null;
         if (couponCode) {
             try {
-                const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+                const cleanedCode = (couponCode || '').trim().toUpperCase();
+                const coupon = await Coupon.findOne({ code: cleanedCode, isActive: true });
                 if (coupon) {
-                    if (coupon.partner) pRef = coupon.partner;
-                    if (coupon.type === 'Percentage') discount = (subtotal * coupon.value) / 100;
-                    else discount = coupon.value;
+                    const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+                    const isUnderMin = subtotal < (coupon.minOrder || 0); // Corrected to subtotal
+                    const isLimitReached = (coupon.usedCount || 0) >= (coupon.usageLimit || 1000);
+
+                    if (!isExpired && !isLimitReached) {
+                        if (coupon.type === 'Percentage') discount = (subtotal * (coupon.value || 0)) / 100;
+                        else discount = (coupon.value || 0);
+                        
+                        discount = Math.min(discount, subtotal);
+                        
+                        // Increment used count for COD
+                        coupon.usedCount = (coupon.usedCount || 0) + 1;
+                        await coupon.save();
+
+                        if (coupon.isPartnerCoupon && coupon.partnerId) {
+                            pRef = {
+                                partnerId: coupon.partnerId.toString(),
+                                partnerName: coupon.partnerName || 'Unknown Partner',
+                                couponCode: coupon.code,
+                                commissionPercent: (coupon.commissionPercent || 0),
+                                commissionAmount: Math.round((subtotal * (coupon.commissionPercent || 0)) / 100),
+                                commissionPaid: false
+                            };
+                        }
+                    }
                 }
-            } catch (err) { }
+            } catch (err) { console.error('COD Coupon Error:', err); }
         }
 
-        // SHIPPING & COD CHARGES Logic (Mirroring Prompt)
-        const shippingCharge = req.body.shippingCharge || 42.48; // Default Zone B
-        const codCharge = 36.58 + (subtotal * 0.0224);
+        // SHIPPING & COD CHARGES Logic (Prioritizing Frontend Calculation for Parity)
+        const shippingCharge = req.body.shippingCharge || 42.48; 
+        const codCharge = req.body.codCharge || (36.58 + (subtotal * 0.0224));
 
         const finalAmount = Math.round(subtotal - discount + shippingCharge + codCharge);
 
@@ -1307,19 +1332,22 @@ router.post('/verify-razorpay', protect, async (req, res) => {
         let appliedCouponCode = '';
 
         if (couponCode) {
-            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+            const cleanedCode = couponCode.trim().toUpperCase();
+            const coupon = await Coupon.findOne({ code: cleanedCode, isActive: true });
             if (coupon) {
                 const isExpired       = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
                 const isUnderMin      = totalAmount < (coupon.minOrder || 0);
-                const isLimitReached  = coupon.usedCount >= coupon.usageLimit;
+                const isLimitReached  = (coupon.usedCount || 0) >= (coupon.usageLimit || 1000);
 
                 if (!isExpired && !isUnderMin && !isLimitReached) {
                     discountAmount = coupon.type === 'Percentage'
-                        ? (totalAmount * coupon.value) / 100
-                        : coupon.value;
+                        ? (totalAmount * (coupon.value || 0)) / 100
+                        : (coupon.value || 0);
                     discountAmount    = Math.min(discountAmount, totalAmount);
                     appliedCouponCode = coupon.code;
-                    coupon.usedCount += 1;
+                    
+                    // Safe increment
+                    coupon.usedCount = (coupon.usedCount || 0) + 1;
                     await coupon.save();
 
                     if (coupon.isPartnerCoupon && coupon.partnerId) {
@@ -1327,7 +1355,7 @@ router.post('/verify-razorpay', protect, async (req, res) => {
                             partnerId       : coupon.partnerId.toString(),
                             partnerName     : coupon.partnerName || 'Unknown Partner',
                             couponCode      : coupon.code,
-                            commissionPercent: coupon.commissionPercent,
+                            commissionPercent: (coupon.commissionPercent || 0),
                             commissionAmount : Math.round((totalAmount * (coupon.commissionPercent || 0)) / 100),
                             commissionPaid  : false
                         };

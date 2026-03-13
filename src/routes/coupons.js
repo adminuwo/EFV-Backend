@@ -19,17 +19,18 @@ router.post('/', adminAuth, async (req, res) => {
         const { code, type, value, minOrder, expiryDate, usageLimit, isPartnerCoupon, partnerId, partnerName, commissionPercent } = req.body;
 
         const couponData = {
-            code: code.toUpperCase(),
+            code: code.trim().toUpperCase(),
             type,
             value,
             minOrder,
             expiryDate,
-            usageLimit: usageLimit || 1000,
-            isPartnerCoupon,
+            usageLimit: Number(usageLimit) || 1000,
+            isPartnerCoupon: !!isPartnerCoupon,
             partnerId,
             partnerName,
-            isActive: true, // Explicitly set active
-            commissionPercent: isPartnerCoupon ? (commissionPercent || 0) : 0
+            isActive: true,
+            commissionPercent: isPartnerCoupon ? (Number(commissionPercent) || 0) : 0,
+            usedCount: 0
         };
 
         const coupon = await Coupon.create(couponData);
@@ -55,7 +56,9 @@ router.delete('/:id', adminAuth, async (req, res) => {
 router.post('/verify', async (req, res) => {
     const { code, amount } = req.body;
     try {
-        const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
+        const cleanedCode = (code || '').trim().toUpperCase();
+        const coupon = await Coupon.findOne({ code: cleanedCode, isActive: true });
+        
         if (!coupon) return res.status(404).json({ message: 'Invalid or inactive coupon' });
 
         if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) {
