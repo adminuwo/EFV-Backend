@@ -7,23 +7,17 @@ const adminAuth = require('../middleware/adminAuth');
 
 // --- PROFILE & DASHBOARD ---
 
-// Get User Profile (with addresses, wishlist, notifications)
-// Get User Profile (with addresses, wishlist, notifications)
 router.get('/profile', protect, async (req, res) => {
     try {
-        // req.user is already populated by protect middleware
-        const user = req.user;
+        const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const userObj = user.toObject();
-        delete userObj.password;
-
         // Ensure notifications have IDs for frontend tracking
         let changed = false;
-        if (userObj.notifications && Array.isArray(userObj.notifications)) {
-            userObj.notifications.forEach(note => {
+        if (user.notifications && Array.isArray(user.notifications)) {
+            user.notifications.forEach(note => {
                 if (!note._id && !note.id) {
                     note._id = 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
                     changed = true;
@@ -31,11 +25,16 @@ router.get('/profile', protect, async (req, res) => {
             });
 
             if (changed) {
-                user.notifications = userObj.notifications;
+                user.markModified('notifications');
                 await user.save();
             }
+        }
 
-            // Sort notifications: Welcome pinned to top, rest newest first
+        const userObj = user.toObject();
+        delete userObj.password;
+
+        // Sort notifications: Welcome pinned to top, rest newest first
+        if (userObj.notifications && Array.isArray(userObj.notifications)) {
             const welcomeNotes = userObj.notifications.filter(n =>
                 (n.title || '').toLowerCase().includes('welcome') || (n.message || '').toLowerCase().includes('welcome')
             );
@@ -54,7 +53,11 @@ router.get('/profile', protect, async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching profile:', error);
-        res.status(500).json({ message: 'Error fetching profile', error: error.message });
+        res.status(500).json({ 
+            message: 'Error fetching profile', 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+        });
     }
 });
 
@@ -72,7 +75,12 @@ router.put('/profile', protect, async (req, res) => {
             res.status(404).json({ message: 'User not found' });
         }
     } catch (error) {
-        res.status(500).json({ message: 'Error updating profile' });
+        console.error('Error updating profile:', error);
+        res.status(500).json({ 
+            message: 'Error updating profile', 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 

@@ -27,6 +27,7 @@ const allowedOrigins = [
     'http://localhost:3001',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
+    'https://efv-743928421487.asia-south1.run.app',
     'https://www.efvframework.com',
     'https://efvframework.com'
 ];
