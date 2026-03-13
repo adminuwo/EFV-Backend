@@ -154,9 +154,10 @@ router.post('/', async (req, res) => {
         // 🔔 Add Purchase Notification (Private)
         if (userId) {
             try {
-                await User.findByIdAndUpdate(userId, (u) => {
-                    if (!u.notifications) u.notifications = [];
-                    u.notifications.unshift({
+                const user = await User.findById(userId);
+                if (user) {
+                    if (!user.notifications) user.notifications = [];
+                    user.notifications.unshift({
                         _id: 'purchase-cod-' + Date.now(),
                         title: 'Order Placed! 📦',
                         message: `Wait for confirmation! Your order ${newOrder.orderId} (COD) has been placed.`,
@@ -165,9 +166,9 @@ router.post('/', async (req, res) => {
                         isRead: false,
                         createdAt: new Date().toISOString()
                     });
-                    u.updatedAt = new Date().toISOString();
-                    return u;
-                });
+                    user.markModified('notifications');
+                    await user.save();
+                }
             } catch (noteErr) {
                 console.error('COD notification error:', noteErr);
             }
@@ -922,57 +923,53 @@ router.post('/test-digital', protect, async (req, res) => {
 
         // 3. Update User Profile (Add to purchasedProducts)
         const prodIdStr = product._id.toString();
-        await User.findByIdAndUpdate(user._id, (u) => {
-            if (!u.purchasedProducts) u.purchasedProducts = [];
-            const isAlreadyPurchased = u.purchasedProducts.some(id => id.toString() === prodIdStr);
+        const mongoUser = await User.findById(user._id);
+        if (mongoUser) {
+            if (!mongoUser.purchasedProducts) mongoUser.purchasedProducts = [];
+            const isAlreadyPurchased = mongoUser.purchasedProducts.some(id => id.toString() === prodIdStr);
             if (!isAlreadyPurchased) {
-                u.purchasedProducts.push(prodIdStr);
+                mongoUser.purchasedProducts.push(prodIdStr);
             }
-            u.updatedAt = new Date().toISOString();
-            return u;
-        });
+            mongoUser.markModified('purchasedProducts');
+            await mongoUser.save();
+        }
 
         // 4. Update Digital Library
-        await DigitalLibrary.findOneAndUpdate(
-            { userId: user._id.toString() },
-            (lib) => {
-                if (!lib) {
-                    return {
-                        userId: user._id.toString(),
-                        items: [{
-                            productId: product._id.toString(),
-                            title: product.title,
-                            type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
-                            thumbnail: product.thumbnail || 'img/vol1-cover.png',
-                            filePath: product.filePath || '',
-                            purchasedAt: new Date().toISOString()
-                        }],
-                        updatedAt: new Date().toISOString()
-                    };
-                }
-                if (!lib.items) lib.items = [];
-                const alreadyInLib = lib.items.some(i => (i.productId || '').toString() === product._id.toString());
-                if (!alreadyInLib) {
-                    lib.items.push({
-                        productId: product._id.toString(),
-                        title: product.title,
-                        type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
-                        thumbnail: product.thumbnail || 'img/vol1-cover.png',
-                        filePath: product.filePath || '',
-                        purchasedAt: new Date().toISOString()
-                    });
-                }
-                lib.updatedAt = new Date().toISOString();
-                return lib;
-            },
-            { upsert: true }
-        );
+        let library = await DigitalLibrary.findOne({ userId: user._id.toString() });
+        if (!library) {
+            library = new DigitalLibrary({
+                userId: user._id.toString(),
+                items: [{
+                    productId: product._id.toString(),
+                    title: product.title,
+                    type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                    thumbnail: product.thumbnail || 'img/vol1-cover.png',
+                    filePath: product.filePath || '',
+                    purchasedAt: new Date().toISOString()
+                }]
+            });
+        } else {
+            if (!library.items) library.items = [];
+            const alreadyInLib = library.items.some(i => (i.productId || '').toString() === product._id.toString());
+            if (!alreadyInLib) {
+                library.items.push({
+                    productId: product._id.toString(),
+                    title: product.title,
+                    type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                    thumbnail: product.thumbnail || 'img/vol1-cover.png',
+                    filePath: product.filePath || '',
+                    purchasedAt: new Date().toISOString()
+                });
+            }
+        }
+        await library.save();
 
         // 🔔 Add Purchase Notification (Test Mode)
         try {
-            await User.findByIdAndUpdate(user._id, (u) => {
-                if (!u.notifications) u.notifications = [];
-                u.notifications.unshift({
+            const mongoUser2 = await User.findById(user._id);
+            if (mongoUser2) {
+                if (!mongoUser2.notifications) mongoUser2.notifications = [];
+                mongoUser2.notifications.unshift({
                     _id: 'purchase-test-' + Date.now(),
                     title: 'Item Unlocked! 🔓',
                     message: `"${product.title}" has been successfully added to your library.`,
@@ -981,9 +978,9 @@ router.post('/test-digital', protect, async (req, res) => {
                     isRead: false,
                     createdAt: new Date().toISOString()
                 });
-                u.updatedAt = new Date().toISOString();
-                return u;
-            });
+                mongoUser2.markModified('notifications');
+                await mongoUser2.save();
+            }
         } catch (noteErr) {
             console.error('Test purchase notification error:', noteErr);
         }
