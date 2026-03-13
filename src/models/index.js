@@ -121,6 +121,14 @@ const purchaseSchema = new mongoose.Schema({
     purchaseDate: { type: Date, default: Date.now }
 });
 
+const orderItemSchema = new mongoose.Schema({
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    title: String,
+    price: Number,
+    quantity: Number,
+    type: { type: String }
+});
+
 const orderSchema = new mongoose.Schema({
     orderId: { type: String, required: true, unique: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Linked to User
@@ -132,13 +140,7 @@ const orderSchema = new mongoose.Schema({
         city: String,
         zip: String
     },
-    items: [{
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-        title: String,
-        price: Number,
-        quantity: Number,
-        type: String
-    }],
+    items: [orderItemSchema],
     totalAmount: { type: Number, required: true },
     shippingCharges: { type: Number, default: 0 },
     codCharges: { type: Number, default: 0 },

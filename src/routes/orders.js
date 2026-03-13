@@ -578,10 +578,16 @@ router.post('/cod', protect, async (req, res) => {
                 country: customer.country || 'India',
                 pincode: customer.pincode
             },
-            items: processedItems,
+            items: processedItems.map(item => ({
+                productId: item.productId,
+                title: item.title,
+                price: Number(item.price),
+                quantity: Number(item.quantity),
+                type: item.type
+            })),
             totalAmount: finalAmount,
-            shippingCharges: shippingCharge,
-            codCharges: codCharge,
+            shippingCharges: Number(shippingCharge) || 0,
+            codCharges: Number(codCharge) || 0,
             discountAmount: discount,
             paymentMethod: 'COD',
             paymentStatus: 'Pending',
@@ -680,7 +686,7 @@ router.post('/cod', protect, async (req, res) => {
 
     } catch (error) {
         console.error('COD Place Error:', error);
-        res.status(500).json({ message: 'Error placing COD order' });
+        res.status(500).json({ message: 'Error placing COD order: ' + error.message, stack: error.stack });
     }
 });
 

@@ -64,8 +64,41 @@ async function getBestCourier(pincode, weight, paymentType, amount) {
         });
 
         if (response.data.status && response.data.data && response.data.data.length > 0) {
-            // Sort by cost or rating. We'll pick the first one which is usually recommended.
-            return response.data.data[0];
+            // Priority list of allowed couriers as per your dashboard
+            const allowedCouriers = [
+                'ekart',
+                'xpressbees surface',
+                'delhivery surface',
+                'amazon shipping'
+            ];
+
+            // Filter the Nimbus response to ONLY include your allowed couriers
+            const availableAllowedCouriers = response.data.data.filter(c => 
+                allowedCouriers.some(allowed => c.name.toLowerCase().includes(allowed))
+            );
+
+            if (availableAllowedCouriers.length > 0) {
+                // Sort them strictly by your priority list (1 to 4)
+                availableAllowedCouriers.sort((a, b) => {
+                    const indexA = allowedCouriers.findIndex(ac => a.name.toLowerCase().includes(ac));
+                    const indexB = allowedCouriers.findIndex(ac => b.name.toLowerCase().includes(ac));
+                    return indexA - indexB;
+                });
+                return availableAllowedCouriers[0];
+            } else {
+                console.warn('⚠️ None of the allowed couriers were serviceable for this pincode:', pincode);
+                // Fallback to top cheapest but forcefully exclude blue dart and bluedart (both variations)
+                const nonBlueDart = response.data.data.filter(c => {
+                    const name = c.name.toLowerCase();
+                    return !name.includes('blue dart') && !name.includes('bluedart');
+                });
+                
+                if(nonBlueDart.length > 0) return nonBlueDart[0];
+                
+                // Absolute last resort - if only blue dart exists, DO NOT SELECT IT
+                console.error('😱 CRITICAL: Only Blue Dart is serviceable for pincode:', pincode, '- skipping auto-booking.');
+                return null; 
+            }
         }
         return null;
     } catch (error) {
