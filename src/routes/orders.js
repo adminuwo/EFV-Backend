@@ -410,21 +410,19 @@ router.post('/verify-cashfree', protect, async (req, res) => {
         }
 
         if (digitalItems.length > 0) {
-            await DigitalLibrary.findOneAndUpdate(
-                { userId: user._id.toString() },
-                (lib) => {
-                    if (!lib) return { userId: user._id.toString(), items: digitalItems, updatedAt: new Date().toISOString() };
-                    if (!lib.items) lib.items = [];
-                    digitalItems.forEach(di => {
-                        if (!lib.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
-                            lib.items.push(di);
-                        }
-                    });
-                    lib.updatedAt = new Date().toISOString();
-                    return lib;
-                },
-                { upsert: true }
-            );
+            let library = await DigitalLibrary.findOne({ userId: user._id.toString() });
+            if (!library) {
+                library = new DigitalLibrary({ userId: user._id.toString(), items: [] });
+            }
+            if (!library.items) library.items = [];
+
+            digitalItems.forEach(di => {
+                if (!library.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
+                    library.items.push(di);
+                }
+            });
+            library.updatedAt = new Date().toISOString();
+            await library.save();
         }
 
         try {
@@ -754,21 +752,19 @@ router.put('/:id/status', adminAuth, async (req, res) => {
                 }
 
                 if (digitalItems.length > 0) {
-                    await DigitalLibrary.findOneAndUpdate(
-                        { userId: userId.toString() },
-                        (lib) => {
-                            if (!lib) return { userId: userId.toString(), items: digitalItems, updatedAt: new Date().toISOString() };
-                            if (!lib.items) lib.items = [];
-                            digitalItems.forEach(di => {
-                                if (!lib.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
-                                    lib.items.push(di);
-                                }
-                            });
-                            lib.updatedAt = new Date().toISOString();
-                            return lib;
-                        },
-                        { upsert: true }
-                    );
+                    let library = await DigitalLibrary.findOne({ userId: userId.toString() });
+                    if (!library) {
+                        library = new DigitalLibrary({ userId: userId.toString(), items: [] });
+                    }
+                    if (!library.items) library.items = [];
+
+                    digitalItems.forEach(di => {
+                        if (!library.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
+                            library.items.push(di);
+                        }
+                    });
+                    library.updatedAt = new Date().toISOString();
+                    await library.save();
                     console.log(`✅ Status Update: Digital items unlocked for ${order.customer.email}`);
                 }
             }
@@ -1446,21 +1442,19 @@ router.post('/verify-razorpay', protect, async (req, res) => {
         }
 
         if (digitalItems.length > 0) {
-            await DigitalLibrary.findOneAndUpdate(
-                { userId: user._id.toString() },
-                (lib) => {
-                    if (!lib) return { userId: user._id.toString(), items: digitalItems, updatedAt: new Date().toISOString() };
-                    if (!lib.items) lib.items = [];
-                    digitalItems.forEach(di => {
-                        if (!lib.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
-                            lib.items.push(di);
-                        }
-                    });
-                    lib.updatedAt = new Date().toISOString();
-                    return lib;
-                },
-                { upsert: true }
-            );
+            let library = await DigitalLibrary.findOne({ userId: user._id.toString() });
+            if (!library) {
+                library = new DigitalLibrary({ userId: user._id.toString(), items: [] });
+            }
+            if (!library.items) library.items = [];
+
+            digitalItems.forEach(di => {
+                if (!library.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
+                    library.items.push(di);
+                }
+            });
+            library.updatedAt = new Date().toISOString();
+            await library.save();
         }
 
         // 8. Notification

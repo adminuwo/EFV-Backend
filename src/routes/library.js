@@ -14,7 +14,11 @@ router.get('/my-library', protect, async (req, res) => {
         const isAdmin = req.user.role === 'admin' || (req.user.email && req.user.email.toLowerCase() === 'admin@uwo24.com');
 
         if (isAdmin) {
-            const allDigitalProducts = await Product.find({ type: { $in: ['EBOOK', 'AUDIOBOOK'] } });
+            // Admin FORCE SYNC: They always get access to ALL digital products
+            const allDigitalProducts = await Product.find({ 
+                type: { $in: ['EBOOK', 'AUDIOBOOK'] } 
+            });
+            console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital products for ${req.user.email}`);
             
             // Map products to library item format
             const adminDigitalItems = allDigitalProducts.map(p => ({
@@ -24,21 +28,26 @@ router.get('/my-library', protect, async (req, res) => {
                 thumbnail: p.thumbnail,
                 filePath: p.filePath,
                 purchasedAt: p.createdAt || new Date(),
-                accessStatus: 'active'
+                accessStatus: 'active',
+                isAutoUnlocked: true // Mark as auto-unlocked for admin
             }));
 
-            // Smart Merge: Start with all products (active), then overwrite with user's specific status (e.g. hidden)
+            // Smart Merge: Start with all products (active), then overwrite with user's specific progress/hidden status
             const itemsMap = new Map();
             adminDigitalItems.forEach(item => itemsMap.set(item.productId.toString(), item));
             
             // Overwrite with actual library data (which might have progress, or be 'hidden')
-            rawItems.forEach(item => {
-                const id = (item.productId ? item.productId.toString() : (item._id ? item._id.toString() : null));
-                if (id && itemsMap.has(id)) {
-                    // Overwrite global product data with user's specific library data (like hidden status)
-                    itemsMap.set(id, { ...itemsMap.get(id), ...item.toObject ? item.toObject() : item });
-                }
-            });
+            if (rawItems && Array.isArray(rawItems)) {
+                rawItems.forEach(item => {
+                    const id = (item.productId ? item.productId.toString() : (item._id ? item._id.toString() : null));
+                    if (id && itemsMap.has(id)) {
+                        // Overwrite global product data with user's specific library data (like hidden status or progress)
+                        const existing = itemsMap.get(id);
+                        const userSpecific = item.toObject ? item.toObject() : item;
+                        itemsMap.set(id, { ...existing, ...userSpecific });
+                    }
+                });
+            }
 
             // For admins, we filter out anything explicitly marked as 'hidden'
             rawItems = Array.from(itemsMap.values()).filter(item => item.accessStatus !== 'hidden');

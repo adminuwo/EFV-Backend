@@ -62,6 +62,7 @@ const productSchema = new mongoose.Schema({
     category: { type: String, default: 'Digital' },
     description: String,
     volume: String, // e.g. "1", "2"
+    language: { type: String, default: 'Hindi' }, // Hindi, English
     legacyId: { type: String, sparse: true, unique: true }, // For string IDs like "efv_v1_audiobook"
 
     // Shipping Details (for Shiprocket)

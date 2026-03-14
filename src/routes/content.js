@@ -95,13 +95,44 @@ router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
 
         if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File not found on server' });
 
-        res.setHeader('Content-Type', getMimeType(product.filePath));
-        res.setHeader('Content-Disposition', 'inline');
-        res.setHeader('Cache-Control', 'no-store');
+        const stat = fs.statSync(fullPath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+        const mimeType = getMimeType(product.filePath);
 
-        fs.createReadStream(fullPath).pipe(res);
+        // Security headers - prevent download
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Content-Disposition', 'inline');
+        res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+        if (range) {
+            const parts = range.replace(/bytes=/, '').split('-');
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+            const file = fs.createReadStream(fullPath, { start, end });
+
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': mimeType,
+                'Cache-Control': 'no-store'
+            });
+            file.pipe(res);
+        } else {
+            res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': mimeType,
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'no-store'
+            });
+            fs.createReadStream(fullPath).pipe(res);
+        }
     } catch (error) {
-        res.status(500).json({ message: 'Streaming error' });
+        console.error('🔥 EBOOK STREAM ERROR:', error);
+        res.status(500).json({ message: `Streaming error: ${error.message}` });
     }
 });
 
