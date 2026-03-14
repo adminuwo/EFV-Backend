@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Product, DigitalLibrary } = require('../models');
+const { Product, DigitalLibrary, User } = require('../models');
 const adminAuth = require('../middleware/adminAuth');
 
 // Get all products (Public)
@@ -59,6 +59,15 @@ router.post('/', adminAuth, async (req, res) => {
             return res.status(400).json({ message: 'Title, Price, and Type are required' });
         }
 
+        const fs = require('fs');
+        const path = require('path');
+        const debugLog = (msg) => {
+            const logPath = path.join(__dirname, '..', 'data', 'debug.log');
+            fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+        };
+
+        debugLog(`Attempting to create product: ${title} (${type})`);
+
         const product = await Product.create({
             title, author, price, discountPrice, type, filePath,
             description, thumbnail, gallery, stock, discount,
@@ -71,23 +80,33 @@ router.post('/', adminAuth, async (req, res) => {
         // Automatically add to admin's library if it's a digital product
         if (type === 'EBOOK' || type === 'AUDIOBOOK') {
             try {
-                let library = await DigitalLibrary.findOne({ userId: req.user._id });
-                if (!library) {
-                    library = new DigitalLibrary({ userId: req.user._id, items: [] });
+                // HARDCODE: Always ensure product goes to admin@uwo24.com
+                const adminUser = await User.findOne({ email: 'admin@uwo24.com' });
+                const targets = [req.user._id];
+                if (adminUser && adminUser._id.toString() !== req.user._id.toString()) {
+                    targets.push(adminUser._id);
                 }
 
-                // Check if already in library
-                const exists = library.items.some(item => item.productId.toString() === product._id.toString());
-                if (!exists) {
-                    library.items.push({
-                        productId: product._id,
-                        title: product.title,
-                        type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
-                        thumbnail: product.thumbnail,
-                        filePath: product.filePath,
-                        purchasedAt: new Date()
-                    });
-                    await library.save();
+                for (let userId of targets) {
+                    let library = await DigitalLibrary.findOne({ userId: userId });
+                    if (!library) {
+                        library = new DigitalLibrary({ userId: userId, items: [] });
+                    }
+
+                    // Check if already in library
+                    const exists = library.items.some(item => item.productId && item.productId.toString() === product._id.toString());
+                    if (!exists) {
+                        library.items.push({
+                            productId: product._id,
+                            title: product.title,
+                            type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                            thumbnail: product.thumbnail,
+                            filePath: product.filePath,
+                            purchasedAt: new Date()
+                        });
+                        await library.save();
+                        console.log(`✅ Auto-added to library for user: ${userId}`);
+                    }
                 }
             } catch (libErr) {
                 console.error('Error adding to admin library:', libErr);
@@ -125,7 +144,13 @@ router.post('/', adminAuth, async (req, res) => {
         res.status(201).json(product);
     } catch (error) {
         console.error('Create product error:', error);
-        res.status(500).json({ message: 'Error creating product' });
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const logPath = path.join(__dirname, '..', 'data', 'debug.log');
+            fs.appendFileSync(logPath, `[${new Date().toISOString()}] ❌ ERROR: ${error.stack}\n`);
+        } catch (e) {}
+        res.status(500).json({ message: 'Error creating product: ' + error.message });
     }
 });
 
@@ -161,11 +186,18 @@ router.put('/:id', adminAuth, async (req, res) => {
                 const libraries = await DigitalLibrary.find({});
                 let modifiedCount = 0;
 
+                // HARDCODE: Explicitly ensure admin@uwo24.com has it
+                const masterAdmin = await User.findOne({ email: 'admin@uwo24.com' });
+                const masterAdminId = masterAdmin ? masterAdmin._id.toString() : null;
+
                 for (let lib of libraries) {
                     let changed = false;
+                    let found = false;
+
                     lib.items = lib.items.map(item => {
                         if (item.productId && item.productId.toString() === product._id.toString()) {
                             changed = true;
+                            found = true;
                             return {
                                 ...item,
                                 title: product.title,
@@ -176,6 +208,22 @@ router.put('/:id', adminAuth, async (req, res) => {
                         }
                         return item;
                     });
+
+                    // ADMIN SPECIFIC: If this is the current admin's library OR the hardcoded admin's library, ADD IT IF MISSING
+                    const isCurrentAdmin = lib.userId && lib.userId.toString() === req.user._id.toString();
+                    const isMasterAdmin = lib.userId && lib.userId.toString() === masterAdminId;
+
+                    if ((isCurrentAdmin || isMasterAdmin) && !found) {
+                        lib.items.push({
+                            productId: product._id,
+                            title: product.title,
+                            type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                            thumbnail: product.thumbnail,
+                            filePath: product.filePath,
+                            purchasedAt: new Date()
+                        });
+                        changed = true;
+                    }
 
                     if (changed) {
                         await lib.save();
@@ -192,7 +240,7 @@ router.put('/:id', adminAuth, async (req, res) => {
         res.json(product);
     } catch (error) {
         console.error('Update product error:', error);
-        res.status(500).json({ message: 'Error updating product' });
+        res.status(500).json({ message: 'Error updating product: ' + error.message });
     }
 });
 
