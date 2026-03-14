@@ -62,6 +62,7 @@ const productSchema = new mongoose.Schema({
     category: { type: String, default: 'Digital' },
     description: String,
     volume: String, // e.g. "1", "2"
+    legacyId: { type: String, sparse: true, unique: true }, // For string IDs like "efv_v1_audiobook"
 
     // Shipping Details (for Shiprocket)
     weight: { type: Number, default: 0 }, // in grams
@@ -100,7 +101,7 @@ const digitalLibrarySchema = new mongoose.Schema({
     items: [{
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
         title: String,
-        type: String, // EBOOK or AUDIOBOOK
+        type: { type: String }, // EBOOK or AUDIOBOOK
         thumbnail: String,
         filePath: String,
         purchasedAt: { type: Date, default: Date.now },

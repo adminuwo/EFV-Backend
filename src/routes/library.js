@@ -11,15 +11,47 @@ router.get('/my-library', protect, async (req, res) => {
         let libraryData = await DigitalLibrary.findOne({ userId: req.user._id.toString() });
         let rawItems = libraryData ? (libraryData.items || []) : [];
 
+        const isAdmin = req.user.role === 'admin' || (req.user.email && req.user.email.toLowerCase() === 'admin@uwo24.com');
+
+        if (isAdmin) {
+            const allDigitalProducts = await Product.find({ type: { $in: ['EBOOK', 'AUDIOBOOK'] } });
+            
+            // Map products to library item format
+            const adminDigitalItems = allDigitalProducts.map(p => ({
+                productId: p._id,
+                title: p.title,
+                type: p.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                thumbnail: p.thumbnail,
+                filePath: p.filePath,
+                purchasedAt: p.createdAt || new Date(),
+                accessStatus: 'active'
+            }));
+
+            // Smart Merge: Start with all products (active), then overwrite with user's specific status (e.g. hidden)
+            const itemsMap = new Map();
+            adminDigitalItems.forEach(item => itemsMap.set(item.productId.toString(), item));
+            
+            // Overwrite with actual library data (which might have progress, or be 'hidden')
+            rawItems.forEach(item => {
+                const id = (item.productId ? item.productId.toString() : (item._id ? item._id.toString() : null));
+                if (id && itemsMap.has(id)) {
+                    // Overwrite global product data with user's specific library data (like hidden status)
+                    itemsMap.set(id, { ...itemsMap.get(id), ...item.toObject ? item.toObject() : item });
+                }
+            });
+
+            // For admins, we filter out anything explicitly marked as 'hidden'
+            rawItems = Array.from(itemsMap.values()).filter(item => item.accessStatus !== 'hidden');
+        }
+
         // Helper to sync an item with latest product data
         const syncItemWithProduct = async (item) => {
             try {
                 const productId = (item.productId || item._id || item.id || '').toString();
                 let product = null;
 
-                // Try finding by ID first - works for BOTH MongoDB ObjectIds AND string IDs like 'efv_v1_ebook'
-                // DO NOT gate this behind ObjectId.isValid() — our JSON DB uses string IDs!
-                if (productId) {
+                // Try finding by ID first
+                if (productId && mongoose.Types.ObjectId.isValid(productId)) {
                     product = await Product.findById(productId);
                 }
 
@@ -78,13 +110,18 @@ router.get('/my-library', protect, async (req, res) => {
         // Merge and process all items
         const allItems = [...rawItems, ...demoItems];
 
-        // Use a Map to deduplicate by productId while syncing
+        // Use a Map to deduplicate by productId AND a Set for Titles to handle DB duplicates
         const libraryMap = new Map();
+        const seenTitles = new Set();
+
         for (const item of allItems) {
             const synced = await syncItemWithProduct(item);
             const id = synced.productId?.toString();
-            if (id && !libraryMap.has(id)) {
+            const titleKey = `${synced.title}_${synced.type}`.toLowerCase().replace(/\s+/g, '');
+
+            if (id && !libraryMap.has(id) && !seenTitles.has(titleKey)) {
                 libraryMap.set(id, synced);
+                seenTitles.add(titleKey);
             }
         }
 
@@ -214,38 +251,80 @@ router.post('/add', protect, async (req, res) => {
     }
 });
 
-// DELETE item from user's digital library (permanent ATOMIC)
 router.delete('/my-library/:productId', protect, async (req, res) => {
     try {
-        const userId = req.user._id.toString();
         const { productId } = req.params;
+        const user = req.user;
+        const isAdmin = user.role === 'admin' || (user.email && user.email.toLowerCase() === 'admin@uwo24.com');
 
-        console.log(`🗑️ ATOMIC LIBRARY REMOVE: ${productId} for ${userId}`);
+        console.log(`🗑️ REMOVE REQUEST: Product=${productId}, User=${user.email}, Admin=${isAdmin}`);
 
-        const updatedLib = await DigitalLibrary.findOneAndUpdate(
-            { userId },
-            (lib) => {
-                if (!lib || !lib.items) return lib;
-                const initialCount = lib.items.length;
-                lib.items = lib.items.filter(item => {
-                    const id = (item.productId || item._id || item.id || '').toString();
-                    return id !== productId.toString();
-                });
-                lib._lastStatus = (lib.items.length < initialCount) ? 'SUCCESS' : 'NOT_FOUND';
-                lib.updatedAt = new Date().toISOString();
-                return lib;
+        if (isAdmin) {
+            // Admin logic: Instead of removing from a collection they don't strictly "own" 
+            // (since they override all products), we mark the item as 'hidden' in THEIR library.
+            let library = await DigitalLibrary.findOne({ userId: user._id });
+            if (!library) {
+                console.log('Creating new library for admin');
+                library = new DigitalLibrary({ userId: user._id, items: [] });
             }
-        );
 
-        if (!updatedLib || updatedLib._lastStatus === 'NOT_FOUND') {
-            return res.status(404).json({ message: 'Item not found in library' });
+            // Find if product already exists in their specific entries
+            let item = library.items.find(i => 
+                (i.productId && i.productId.toString() === productId) || 
+                (i._id && i._id.toString() === productId)
+            );
+
+            if (item) {
+                console.log('Marking existing item as hidden');
+                item.accessStatus = 'hidden';
+            } else {
+                console.log('Creating new hidden entry for admin');
+                if (!mongoose.Types.ObjectId.isValid(productId)) {
+                    return res.status(400).json({ message: 'Invalid Product ID format for admin override' });
+                }
+                const product = await Product.findById(productId);
+                if (product) {
+                    library.items.push({
+                        productId: product._id,
+                        title: product.title,
+                        type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                        thumbnail: product.thumbnail,
+                        filePath: product.filePath,
+                        accessStatus: 'hidden',
+                        purchasedAt: new Date()
+                    });
+                } else {
+                    return res.status(404).json({ message: 'Product not found' });
+                }
+            }
+
+            await library.save();
+            console.log('Admin library saved with hidden item');
+            return res.json({ message: 'Item hidden from admin library', library });
+        } else {
+            // Normal user logic: standard $pull
+            if (!mongoose.Types.ObjectId.isValid(productId)) {
+                return res.status(400).json({ message: 'Invalid Product ID format' });
+            }
+            
+            const updatedLib = await DigitalLibrary.findOneAndUpdate(
+                { userId: user._id },
+                { $pull: { items: { productId: new mongoose.Types.ObjectId(productId) } } },
+                { new: true }
+            );
+
+            if (!updatedLib) {
+                return res.status(404).json({ message: 'Library not found' });
+            }
+            return res.json({ message: 'Item removed from library', library: updatedLib });
         }
-
-        console.log(`✅ ATOMIC LIBRARY REMOVE SUCCESS: ${productId}`);
-        res.json({ message: 'Item removed from library', library: updatedLib });
     } catch (error) {
-        console.error('Error removing from library:', error);
-        res.status(500).json({ message: 'Error removing from library' });
+        console.error('ERROR in DELETE /my-library:', error);
+        res.status(500).json({ 
+            message: 'Error removing from library', 
+            error: error.message,
+            stack: error.stack 
+        });
     }
 });
 

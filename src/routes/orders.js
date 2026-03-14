@@ -49,6 +49,30 @@ router.get('/', adminAuth, async (req, res) => {
     }
 });
 
+// Get single order (Admin or Owner)
+router.get('/:id', protect, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Security check: Only admin or owner
+        const isAdmin = req.user.role === 'admin' || req.user.email?.toLowerCase() === 'admin@uwo24.com';
+        const isOwner = order.userId?.toString() === req.user._id?.toString() || 
+                       order.customer?.email?.toLowerCase() === req.user.email?.toLowerCase();
+        
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ message: 'Unauthorized access' });
+        }
+
+        res.json(order);
+    } catch (error) {
+        console.error('Fetch Order Error:', error);
+        res.status(500).json({ message: 'Error fetching order details' });
+    }
+});
+
 // Place new order (Public)
 router.post('/', async (req, res) => {
     try {

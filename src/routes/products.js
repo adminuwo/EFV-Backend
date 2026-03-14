@@ -19,12 +19,18 @@ router.get('/:id', async (req, res) => {
         let product = null;
         const id = req.params.id;
 
-        // Try as MongoDB ObjectId first, then fall back to legacyId
+        // 1. Try as MongoDB ObjectId first
         const isObjectId = /^[a-f\d]{24}$/i.test(id);
         if (isObjectId) {
             product = await Product.findById(id);
         }
-        // If not found by ObjectId (or it's a string ID like "efv_v1_audiobook"), try legacyId
+
+        // 2. If not found, try as raw _id (for legacy string IDs like "efv_v1_audiobook")
+        if (!product) {
+            product = await Product.findOne({ _id: id });
+        }
+
+        // 3. If still not found, try legacyId field
         if (!product) {
             product = await Product.findOne({ legacyId: id });
         }
@@ -34,6 +40,7 @@ router.get('/:id', async (req, res) => {
         }
         res.json(product);
     } catch (error) {
+        console.error('Fetch product error:', error);
         res.status(500).json({ message: 'Error fetching product' });
     }
 });
@@ -125,7 +132,25 @@ router.post('/', adminAuth, async (req, res) => {
 // Update Product (Admin Only)
 router.put('/:id', adminAuth, async (req, res) => {
     try {
-        const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const id = req.params.id;
+        let product = null;
+
+        // 1. Try to update by ObjectId first
+        const isObjectId = /^[a-f\d]{24}$/i.test(id);
+        if (isObjectId) {
+            product = await Product.findByIdAndUpdate(id, req.body, { new: true });
+        }
+
+        // 2. Try raw _id (for string IDs)
+        if (!product) {
+            product = await Product.findOneAndUpdate({ _id: id }, req.body, { new: true });
+        }
+
+        // 3. Try legacyId field
+        if (!product) {
+            product = await Product.findOneAndUpdate({ legacyId: id }, req.body, { new: true });
+        }
+
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
@@ -166,6 +191,7 @@ router.put('/:id', adminAuth, async (req, res) => {
         console.log('📝 Updated Product in DB:', product._id);
         res.json(product);
     } catch (error) {
+        console.error('Update product error:', error);
         res.status(500).json({ message: 'Error updating product' });
     }
 });
@@ -174,12 +200,28 @@ router.put('/:id', adminAuth, async (req, res) => {
 router.delete('/:id', adminAuth, async (req, res) => {
     console.log(`🗑️ Admin: Deleting Product Request for ID: ${req.params.id}`);
     try {
-        const product = await Product.findByIdAndDelete(req.params.id);
+        const id = req.params.id;
+        let product = null;
+
+        const isObjectId = /^[a-f\d]{24}$/i.test(id);
+        if (isObjectId) {
+            product = await Product.findByIdAndDelete(id);
+        }
+
+        if (!product) {
+            product = await Product.findOneAndDelete({ _id: id });
+        }
+
+        if (!product) {
+            product = await Product.findOneAndDelete({ legacyId: id });
+        }
+
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
+        console.error('Delete product error:', error);
         res.status(500).json({ message: 'Error deleting product' });
     }
 });

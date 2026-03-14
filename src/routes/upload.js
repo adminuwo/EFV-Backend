@@ -16,6 +16,8 @@ const storage = multer.diskStorage({
             dest = path.join(rootDir, 'src/uploads/covers');
         } else if (file.fieldname === 'ebook') {
             dest = path.join(rootDir, 'src/uploads/ebooks');
+        } else if (file.fieldname === 'gallery') {
+            dest = path.join(rootDir, 'src/uploads/gallery');
         }
 
         // Ensure directory exists
@@ -74,6 +76,9 @@ router.post('/', adminAuth, (req, res, next) => {
                 responseIds.ebookPath = `uploads/ebooks/${file.filename}`;
             } else if (file.fieldname === 'audio') {
                 responseIds.audioPath = `uploads/audios/${file.filename}`;
+            } else if (file.fieldname === 'gallery') {
+                if (!responseIds.galleryPaths) responseIds.galleryPaths = [];
+                responseIds.galleryPaths.push(`uploads/gallery/${file.filename}`);
             } else if (file.fieldname.startsWith('chapter_')) {
                 const index = file.fieldname.split('_')[1];
                 chapterPaths[index] = `uploads/audios/${file.filename}`;
