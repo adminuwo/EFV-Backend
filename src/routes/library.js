@@ -17,12 +17,22 @@ router.get('/my-library', protect, async (req, res) => {
         const isAdmin = req.user.role === 'admin' || userEmail === 'admin@uwo24.com';
 
         if (isAdmin) {
-            console.log(`🔍 [ADMIN SYNC] detected for ${userEmail}. Fetching all digital products...`);
             // Admin FORCE SYNC: They always get access to ALL digital products
-            // Using case-insensitive regex to catch EBOOK, Ebook, E-Book, AUDIOBOOK, etc.
-            const allDigitalProducts = await Product.find({
-                type: { $in: ['EBOOK', 'AUDIOBOOK', 'E-BOOK', 'Ebook', 'Audiobook'] }
+            // Loose query: Find everything, then filter out PHYSICAL in memory if needed
+            let allDigitalProducts = await Product.find({
+                type: { $ne: 'PHYSICAL' } 
             });
+
+            // If still empty (legacy data might use different field), try a very broad find
+            if (allDigitalProducts.length === 0) {
+                allDigitalProducts = await Product.find({
+                    $or: [
+                        { filePath: { $exists: true, $ne: '' } },
+                        { type: { $in: ['EBOOK', 'AUDIOBOOK', 'E-BOOK', 'Ebook', 'Audiobook'] } }
+                    ]
+                });
+            }
+
             console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital products for ${req.user.email}`);
 
             const adminDigitalItems = allDigitalProducts.map(p => ({
@@ -33,7 +43,7 @@ router.get('/my-library', protect, async (req, res) => {
                 filePath: p.filePath,
                 purchasedAt: p.createdAt || new Date(),
                 accessStatus: 'active',
-                isAutoUnlocked: true // Mark as auto-unlocked for admin
+                isAutoUnlocked: true 
             }));
 
             // Smart Merge: Start with all products (active), then overwrite with user's specific progress/hidden status
@@ -277,10 +287,15 @@ router.post('/add', protect, async (req, res) => {
         });
 
         await library.save();
-        res.status(201).json({ message: 'Product added to library successfully', library });
+        res.status(201).json({ success: true, message: 'Product added to library successfully', library });
     } catch (error) {
         console.error('Error adding to library:', error);
-        res.status(500).json({ message: 'Error adding to library' });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error adding to library', 
+            error: error.message,
+            productId: req.body.productId 
+        });
     }
 });
 
