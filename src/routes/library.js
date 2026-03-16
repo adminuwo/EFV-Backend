@@ -310,10 +310,17 @@ router.delete('/my-library/:productId', protect, async (req, res) => {
                 item.accessStatus = 'hidden';
             } else {
                 console.log('Creating new hidden entry for admin');
-                if (!mongoose.Types.ObjectId.isValid(productId)) {
-                    return res.status(400).json({ message: 'Invalid Product ID format for admin override' });
+                
+                // Try to find the product to get its details, support both ObjectId and string IDs
+                let product = null;
+                if (mongoose.Types.ObjectId.isValid(productId)) {
+                    product = await Product.findById(productId);
                 }
-                const product = await Product.findById(productId);
+                
+                if (!product) {
+                    product = await Product.findOne({ _id: productId });
+                }
+
                 if (product) {
                     library.items.push({
                         productId: product._id,
