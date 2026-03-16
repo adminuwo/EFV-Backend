@@ -21,7 +21,7 @@ router.get('/my-library', protect, async (req, res) => {
             // Admin FORCE SYNC: They always get access to ALL digital products
             // Using case-insensitive regex to catch EBOOK, Ebook, E-Book, AUDIOBOOK, etc.
             const allDigitalProducts = await Product.find({
-                type: { $regex: /^(EBOOK|AUDIOBOOK|E-BOOK)$/i }
+                type: /^(EBOOK|AUDIOBOOK|E-BOOK)$/i
             });
             console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital products for ${req.user.email}`);
 
@@ -258,7 +258,8 @@ router.post('/add', protect, async (req, res) => {
                 return res.json({ success: true, message: 'Product reactivated in library', library });
             }
 
-            return res.status(400).json({ message: 'Product already in your library' });
+            // Already in library and active - return success (idempotent)
+            return res.json({ success: true, message: 'Product already in your library' });
         }
 
         // Add to library
