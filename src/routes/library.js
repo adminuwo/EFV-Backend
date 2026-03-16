@@ -11,9 +11,11 @@ router.get('/my-library', protect, async (req, res) => {
         let libraryData = await DigitalLibrary.findOne({ userId: req.user._id.toString() });
         let rawItems = libraryData ? (libraryData.items || []) : [];
  
-        const isAdmin = req.user.role === 'admin' || (req.user.email && req.user.email.toLowerCase() === 'admin@uwo24.com');
+        const userEmail = (req.user.email || '').toLowerCase().trim();
+        const isAdmin = req.user.role === 'admin' || userEmail === 'admin@uwo24.com';
 
         if (isAdmin) {
+            console.log(`🔍 [ADMIN SYNC] detected for ${userEmail}. Fetching all digital products...`);
             // Admin FORCE SYNC: They always get access to ALL digital products
             // Using case-insensitive regex to catch EBOOK, Ebook, E-Book, AUDIOBOOK, etc.
             const allDigitalProducts = await Product.find({ 
@@ -21,11 +23,10 @@ router.get('/my-library', protect, async (req, res) => {
             });
             console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital products for ${req.user.email}`);
             
-            // Map products to library item format
             const adminDigitalItems = allDigitalProducts.map(p => ({
                 productId: p._id,
                 title: p.title,
-                type: p.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                type: (p.type || '').toUpperCase().includes('AUDIO') ? 'Audiobook' : 'E-Book',
                 thumbnail: p.thumbnail,
                 filePath: p.filePath,
                 purchasedAt: p.createdAt || new Date(),

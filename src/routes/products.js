@@ -81,7 +81,7 @@ router.post('/', adminAuth, async (req, res) => {
         if (type === 'EBOOK' || type === 'AUDIOBOOK') {
             try {
                 // HARDCODE: Always ensure product goes to admin@uwo24.com
-                const adminUser = await User.findOne({ email: 'admin@uwo24.com' });
+                const adminUser = await User.findOne({ email: /admin@uwo24\.com/i });
                 const targets = [req.user._id];
                 if (adminUser && adminUser._id.toString() !== req.user._id.toString()) {
                     targets.push(adminUser._id);
