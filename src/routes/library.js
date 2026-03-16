@@ -190,7 +190,7 @@ router.get('/progress/:productId', protect, async (req, res) => {
 
 // Add product to user's library (Manual/Instant Fulfillment)
 router.post('/add', protect, async (req, res) => {
-    console.log(`📥 [LIBRARY ADD] Request received for product: ${req.body.productId} from user: ${req.user.email}`);
+    console.log(`📥 [LIBRARY ADD] Request:`, req.body);
     try {
         const { productId } = req.body;
         const userId = req.user._id;
@@ -240,8 +240,24 @@ router.post('/add', protect, async (req, res) => {
         }
 
         // Check if already in library
-        const isOwned = library.items.some(item => item.productId.toString() === product._id.toString());
-        if (isOwned) {
+        // Check if already in library
+        const existingItemIndex = library.items.findIndex(item => 
+            (item.productId && item.productId.toString() === product._id.toString()) ||
+            (item._id && item._id.toString() === product._id.toString())
+        );
+
+        if (existingItemIndex > -1) {
+            const existingItem = library.items[existingItemIndex];
+            
+            // If it's there but hidden or inactive, reactivate it!
+            if (existingItem.accessStatus === 'hidden' || existingItem.accessStatus === 'inactive') {
+                existingItem.accessStatus = 'active';
+                existingItem.purchasedAt = new Date();
+                library.markModified('items');
+                await library.save();
+                return res.json({ success: true, message: 'Product reactivated in library', library });
+            }
+
             return res.status(400).json({ message: 'Product already in your library' });
         }
 
