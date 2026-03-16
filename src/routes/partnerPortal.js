@@ -212,7 +212,6 @@ router.get('/dashboard', partnerAuth, async (req, res) => {
             .reduce((sum, o) => sum + (o.partnerRef.commissionAmount || 0), 0);
 
         // Fetch linked coupon - Use string comparison for IDs
-        const partnerIdStr = partner._id.toString();
         console.log(`🔍 Dashboard: Fetching coupon for partnerId: ${partnerIdStr}`);
         
         const coupons = await Coupon.find({ partnerId: partnerIdStr });
