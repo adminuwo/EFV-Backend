@@ -100,7 +100,7 @@ const cartSchema = new mongoose.Schema({
 const digitalLibrarySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     items: [{
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+        productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
         title: String,
         type: { type: String }, // EBOOK or AUDIOBOOK
         thumbnail: String,
@@ -118,13 +118,13 @@ const digitalLibrarySchema = new mongoose.Schema({
 
 const purchaseSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product', required: true },
     transactionId: String,
     purchaseDate: { type: Date, default: Date.now }
 });
 
 const orderItemSchema = new mongoose.Schema({
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
     title: String,
     price: Number,
     quantity: Number,
@@ -225,7 +225,7 @@ const couponSchema = new mongoose.Schema({
 
 const userProgressSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product', required: true },
     type: { type: String, enum: ['EBOOK', 'AUDIOBOOK'], required: true },
     progress: { type: Number, default: 0 }, // 0-100 percentage
 
@@ -244,7 +244,7 @@ const userProgressSchema = new mongoose.Schema({
 // Chapter-level audiobook progress
 const audiobookProgressSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product', required: true },
     // Per-chapter tracking
     chapters: [{
         chapterIndex: { type: Number, required: true }, // 0-based index
