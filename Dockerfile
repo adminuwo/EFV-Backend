@@ -8,12 +8,13 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --omit=dev
 
 # Copy app source code
 COPY . .
 
 # Expose the port the app runs on (matching .env/server.js)
+ENV PORT=8080
 EXPOSE 8080
 
 # Start the application
