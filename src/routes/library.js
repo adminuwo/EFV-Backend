@@ -6,6 +6,8 @@ const { User, Purchase, Product, UserProgress, DigitalLibrary } = require('../mo
 
 
 // Get user's digital library
+router.get('/test-ping', (req, res) => res.json({ message: 'Library Route v1.3 is ACTIVE', timestamp: new Date() }));
+
 router.get('/my-library', protect, async (req, res) => {
     try {
         let libraryData = await DigitalLibrary.findOne({ userId: req.user._id.toString() });
@@ -188,6 +190,7 @@ router.get('/progress/:productId', protect, async (req, res) => {
 
 // Add product to user's library (Manual/Instant Fulfillment)
 router.post('/add', protect, async (req, res) => {
+    console.log(`📥 [LIBRARY ADD] Request received for product: ${req.body.productId} from user: ${req.user.email}`);
     try {
         const { productId } = req.body;
         const userId = req.user._id;

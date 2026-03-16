@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 const express = require('express');
-console.log("🚀 Server: Loading Version 1.2 (Active)... Port: 8080");
+console.log("🚀 Server: Loading Version 1.3 (Active)... Port: 8080");
 const dns = require('node:dns');
 dns.setDefaultResultOrder('ipv4first');
 const cors = require('cors');
