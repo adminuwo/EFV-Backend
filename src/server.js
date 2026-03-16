@@ -103,7 +103,11 @@ app.use(cors({
 app.use(express.json());
 
 // Serve Frontend Static Files
-const frontendPath = path.join(__dirname, '..', '..', 'EFV-F', 'public');
+// Serve Frontend Static Files (Attempt sibling directory first, then local)
+let frontendPath = path.join(__dirname, '..', '..', 'EFV-F', 'public');
+if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.join(__dirname, '..', 'public');
+}
 
 // In-memory storage for demo mode (no MongoDB required)
 global.demoUsers = new Map(); // email -> { name, email, library: [] }
@@ -179,7 +183,8 @@ nimbusPostService.login().then(() => {
 });
 
 const PORT = process.env.PORT || 8080;
-const server = app.listen(PORT, '0.0.0.0', () => {
+// Removing '0.0.0.0' to let Node decide the best interface (usually binds all, which is required by Cloud Run)
+const server = app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`📁 Serving frontend from: ${frontendPath}`);
 });

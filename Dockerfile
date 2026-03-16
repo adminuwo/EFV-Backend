@@ -4,18 +4,20 @@ FROM node:18-alpine
 # Create app directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --omit=dev
+# Install production dependencies only
+RUN npm ci --only=production
 
 # Copy app source code
 COPY . .
 
-# Expose the port the app runs on (matching .env/server.js)
-ENV PORT=8080
-EXPOSE 8080
+# Ensure upload directories exist inside the container
+RUN mkdir -p src/uploads/covers src/uploads/profiles src/uploads/products
 
-# Start the application
-CMD ["npm", "start"]
+# Use the PORT environment variable provided by Cloud Run
+ENV PORT=8080
+
+# Start the application using node directly (better signal handling than npm start)
+CMD ["node", "src/server.js"]
