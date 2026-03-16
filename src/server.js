@@ -7,7 +7,6 @@ dns.setDefaultResultOrder('ipv4first');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const generateNimbusToken = require("./routes/nimbusToken");
 const nimbusShipping = require("./routes/nimbusShipping").default || require("./routes/nimbusShipping");
 
 // Load .env from parent directory (EFV-Backend/.env)
@@ -78,67 +77,71 @@ global.demoProducts = [
         title: 'EFV™ VOL 1: The Origin Code (Audiobook)',
         type: 'AUDIOBOOK',
         price: 199,
-        filePath: 'audiobooks/efv-audio.mp3'
+        originalPrice: 999,
+        image: 'img/vol1-cover.png',
+        chapters: 5,
+        rating: 4.9,
+        reviews: 245
     },
     {
-        _id: 'efv_v1_ebook',
-        title: 'EFV™ VOL 1: The Origin Code (E-Book)',
-        type: 'EBOOK',
-        price: 149,
-        filePath: 'ebooks/efv-checklist.pdf'
+        _id: 'efv_v2_hardcover',
+        title: 'EFV™ VOL 1: The Origin Code (Hardcover)',
+        type: 'HARDCOVER',
+        price: 799,
+        originalPrice: 1499,
+        image: 'img/v1-physical.png',
+        stock: 50,
+        rating: 4.8,
+        reviews: 189
     }
 ];
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/content', require('./routes/content'));
-app.use('/api/library', require('./routes/library'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
-app.use('/api/demo', require('./routes/demo'));
-app.use('/api/chat', require('./routes/chat'));
-app.use('/api/progress', require('./routes/progress'));
-app.use('/api/upload', require('./routes/upload'));
 app.use('/api/users', require('./routes/users'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/shipments', require('./routes/shipments'));
+app.use('/api/library', require('./routes/library'));
+app.use('/api/progress', require('./routes/progress'));
+app.use('/api/content', require('./routes/content'));
 app.use('/api/coupons', require('./routes/coupons'));
+app.use('/api/returns', require('./routes/returns'));
+app.use('/api/support', require('./routes/support'));
 app.use('/api/partners', require('./routes/partners'));
 app.use('/api/partner-portal', require('./routes/partnerPortal'));
 app.use('/api/partner-messages', require('./routes/partnerMessages'));
-app.use('/api/support', require('./routes/support'));
 app.use('/api/audiobook-progress', require('./routes/audiobookProgress'));
-app.use("/api/nimbus", nimbusShipping);
-app.use('/api/returns', require('./routes/returns'));
+app.use('/api/demo', require('./routes/demo'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/shipments', require('./routes/shipments'));
+app.use('/api/nimbus', nimbusShipping);
+
+// Static files (PDFs, Audio, Images)
+app.use('/content', express.static(path.join(__dirname, 'data', 'content')));
 app.use(express.static(frontendPath));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Fallback to index.html for any other routes (to support SPA if needed)
-app.use('/api', (req, res, next) => next());
-
+// Fallback for SPA
 app.get('*', (req, res) => {
+    // If request is for API, don't serve index.html
+    if (req.url.startsWith('/api/')) {
+        return res.status(404).json({ message: 'API Route not found' });
+    }
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-    console.error('SERVER ERROR:', err);
-    res.status(err.status || 500).json({
-        message: err.message || 'Internal Server Error',
-        error: process.env.NODE_ENV === 'development' ? err : {}
-    });
+// Consolidated Nimbus Login using nimbusPostService
+const nimbusPostService = require('./services/nimbusPostService');
+nimbusPostService.login().then(() => {
+    console.log("✅ Initial Nimbus Authentication Complete");
+}).catch(err => {
+    console.error("❌ Pre-emptive Nimbus Authentication Failed, will retry on use.");
 });
 
-// Nimbus token generate at server start
-generateNimbusToken();
-
-// auto refresh token every 12 hours
-setInterval(generateNimbusToken, 1000 * 60 * 60 * 12);
-
 const PORT = process.env.PORT || 8080;
-
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`📁 Serving frontend from: ${frontendPath}`);
 });
+
+// Increase timeout for long requests
+server.timeout = 30000;

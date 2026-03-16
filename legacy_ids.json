@@ -1,0 +1,97 @@
+[
+  {
+    "id": "69b2865b058ac23ed348dcd2",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "legacyId": "efv_v1_hardcover",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b2865b058ac23ed348dcd7",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "legacyId": "efv_v1_paperback",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b2865b058ac23ed348dcda",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "legacyId": "efv_v1_ebook",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b2865b058ac23ed348dcdd",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "legacyId": "efv_v1_audiobook",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b2865b058ac23ed348dced",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_hardcover",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b2865b058ac23ed348dcf0",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_paperback",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b2865b058ac23ed348dcf3",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_ebook",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b2865b058ac23ed348dcf6",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_audiobook",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b527b4b019ed52aa47a198",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "hasLegacyId": false
+  },
+  {
+    "id": "69b5284678bb3f967f62943e",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "legacyId": "efv_v1_paperback_english",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b5284778bb3f967f629441",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "legacyId": "efv_v1_audiobook_english",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b5284778bb3f967f62945a",
+    "title": "EFV™ VOL 1: ORIGIN CODE™",
+    "legacyId": "efv_v1_ebook_hindi",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b5284778bb3f967f62945c",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_hardcover_english",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b5284778bb3f967f62945e",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_paperback_english",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b5284778bb3f967f629460",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_audiobook_english",
+    "hasLegacyId": true
+  },
+  {
+    "id": "69b5284778bb3f967f629462",
+    "title": "EFV™ VOL 2: MINDOS™",
+    "legacyId": "efv_v2_ebook_english",
+    "hasLegacyId": true
+  }
+]

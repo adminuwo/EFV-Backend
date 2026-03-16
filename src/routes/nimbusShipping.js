@@ -8,32 +8,24 @@ console.log("🚚 NimbusShipping.js Loaded");
 router.post("/check-delivery", async (req, res) => {
     try {
         const { pickup_pincode, delivery_pincode, weight, order_amount } = req.body;
+        const nimbusPostService = require('../services/nimbusPostService');
 
         // Convert weight to grams and ensure it is an integer as per Nimbus requirement
         const weightInGrams = Math.round(parseFloat(weight) * 1000);
 
-        const response = await axios.post(
-            "https://api.nimbuspost.com/v1/courier/serviceability",
-            {
-                origin: pickup_pincode || "482001",
-                destination: delivery_pincode,
-                payment_type: "prepaid",
-                order_amount: order_amount || 100,
-                weight: weightInGrams
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${global.nimbusToken}`,
-                    "Content-Type": "application/json"
-                }
-            }
-        );
+        const result = await nimbusPostService.checkServiceability({
+            origin: pickup_pincode || "482008",
+            destination: delivery_pincode,
+            payment_type: "prepaid",
+            order_amount: order_amount || 100,
+            weight: weightInGrams
+        });
 
-        res.json(response.data);
+        res.json(result);
 
     } catch (error) {
         console.log("Serviceability Error:", error.response?.data || error.message);
-        res.status(500).json({ error: "Nimbus serviceability failed", details: error.response?.data });
+        res.status(500).json({ status: false, message: "Nimbus serviceability failed", details: error.response?.data });
     }
 });
 
