@@ -17,23 +17,20 @@ router.get('/my-library', protect, async (req, res) => {
         const isAdmin = req.user.role === 'admin' || userEmail === 'admin@uwo24.com';
 
         if (isAdmin) {
-            // Admin FORCE SYNC: They always get access to ALL digital products
-            // Loose query: Find everything, then filter out PHYSICAL in memory if needed
-            let allDigitalProducts = await Product.find({
-                type: { $ne: 'PHYSICAL' } 
+            console.log(`🔍 [ADMIN SYNC] Fetching all products for ${userEmail}`);
+            // Fetch EVERYTHING first to avoid any DB query issues
+            const allProducts = await Product.find({});
+            
+            // Filter in memory for digital items (EBOOK, AUDIOBOOK, or anything with a filePath)
+            const allDigitalProducts = allProducts.filter(p => {
+                const type = (p.type || '').toUpperCase();
+                return type.includes('EBOOK') || 
+                       type.includes('AUDIO') || 
+                       type.includes('DIGITAL') ||
+                       (p.filePath && p.filePath.length > 5);
             });
 
-            // If still empty (legacy data might use different field), try a very broad find
-            if (allDigitalProducts.length === 0) {
-                allDigitalProducts = await Product.find({
-                    $or: [
-                        { filePath: { $exists: true, $ne: '' } },
-                        { type: { $in: ['EBOOK', 'AUDIOBOOK', 'E-BOOK', 'Ebook', 'Audiobook'] } }
-                    ]
-                });
-            }
-
-            console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital products for ${req.user.email}`);
+            console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital items out of ${allProducts.length} total.`);
 
             const adminDigitalItems = allDigitalProducts.map(p => ({
                 productId: p._id,
