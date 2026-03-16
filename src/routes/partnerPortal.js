@@ -192,12 +192,18 @@ router.post('/login', async (req, res) => {
 router.get('/dashboard', partnerAuth, async (req, res) => {
     try {
         const partner = req.partner;
+        // Calculate stats
+        const partnerIdStr = partner._id.toString();
         const orders = await Order.find({
-            'partnerRef.partnerId': partner._id.toString(),
+            $or: [
+                { 'partnerRef.partnerId': partnerIdStr },
+                { 'partnerRef.partnerId': partner._id } // Catch any potential direct ObjectId storage
+            ],
             status: { $nin: ['Cancelled', 'Failed'] }
         }).sort({ createdAt: -1 });
 
-        // Calculate stats
+        console.log(`📊 Dashboard: Found ${orders.length} orders for partner: ${partner.name} (${partnerIdStr})`);
+
         const totalSales = orders.length;
         const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
         const totalCommissionEarned = orders.reduce((sum, o) => sum + (o.partnerRef.commissionAmount || 0), 0);

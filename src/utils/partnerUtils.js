@@ -4,7 +4,10 @@ const { Partner, PartnerSale } = require('../models');
  * Handles recording a sale for a partner when an order is successfully placed/verified.
  */
 async function processPartnerSale(order, partnerRef) {
-    if (!partnerRef || !partnerRef.partnerId) return;
+    if (!partnerRef || !partnerRef.partnerId) {
+        console.warn(`⚠️ [PARTNER-SALE] Skipping: No partnerRef or partnerId for Order ${order.orderId}`);
+        return;
+    }
 
     try {
         const partner = await Partner.findById(partnerRef.partnerId);

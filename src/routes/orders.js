@@ -117,9 +117,11 @@ router.post('/', async (req, res) => {
 
         if (couponCode) {
             const cleanedCode = (couponCode || '').trim().toUpperCase();
+            console.log(`🔍 [COD] Checking coupon: "${cleanedCode}"`);
             const coupon = await Coupon.findOne({ code: cleanedCode, isActive: true });
             
             if (coupon) {
+                console.log(`✅ [COD] Coupon found: ${coupon.code}. isPartner: ${coupon.isPartnerCoupon}`);
                 const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
                 const isUnderMin = totalAmount < (coupon.minOrder || 0);
                 const isLimitReached = (coupon.usedCount || 0) >= (coupon.usageLimit || 1000);
@@ -146,8 +148,13 @@ router.post('/', async (req, res) => {
                             commissionAmount: Math.round((totalAmount * (coupon.commissionPercent || 0)) / 100),
                             commissionPaid: false
                         };
+                        console.log(`💰 [COD] Partner Ref Attached: ${partnerRef.partnerName}`);
                     }
+                } else {
+                    console.log(`⚠️ [COD] Coupon checks failed: Expired=${isExpired}, UnderMin=${isUnderMin}`);
                 }
+            } else {
+                console.log(`❌ [COD] Coupon "${cleanedCode}" not found`);
             }
         }
 
@@ -1357,9 +1364,11 @@ router.post('/verify-razorpay', protect, async (req, res) => {
         let appliedCouponCode = '';
 
         if (couponCode) {
-            const cleanedCode = couponCode.trim().toUpperCase();
+            const cleanedCode = (couponCode || '').trim().toUpperCase();
+            console.log(`🔍 [VERIFY-RZP] Checking coupon: "${cleanedCode}"`);
             const coupon = await Coupon.findOne({ code: cleanedCode, isActive: true });
             if (coupon) {
+                console.log(`✅ [VERIFY-RZP] Coupon found: ${coupon.code}. isPartner: ${coupon.isPartnerCoupon}`);
                 const isExpired       = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
                 const isUnderMin      = totalAmount < (coupon.minOrder || 0);
                 const isLimitReached  = (coupon.usedCount || 0) >= (coupon.usageLimit || 1000);
@@ -1384,8 +1393,13 @@ router.post('/verify-razorpay', protect, async (req, res) => {
                             commissionAmount : Math.round((totalAmount * (coupon.commissionPercent || 0)) / 100),
                             commissionPaid  : false
                         };
+                        console.log(`💰 [VERIFY-RZP] Partner Ref Attached: ${partnerRef.partnerName} (${partnerRef.partnerId})`);
                     }
+                } else {
+                    console.log(`⚠️ [VERIFY-RZP] Coupon ${coupon.code} failed checks: Expired=${isExpired}, UnderMin=${isUnderMin}, LimitReached=${isLimitReached}`);
                 }
+            } else {
+                console.log(`❌ [VERIFY-RZP] Coupon "${cleanedCode}" not found or inactive`);
             }
         }
 
