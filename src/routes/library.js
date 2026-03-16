@@ -12,7 +12,7 @@ router.get('/my-library', protect, async (req, res) => {
     try {
         let libraryData = await DigitalLibrary.findOne({ userId: req.user._id.toString() });
         let rawItems = libraryData ? (libraryData.items || []) : [];
- 
+
         const userEmail = (req.user.email || '').toLowerCase().trim();
         const isAdmin = req.user.role === 'admin' || userEmail === 'admin@uwo24.com';
 
@@ -20,11 +20,11 @@ router.get('/my-library', protect, async (req, res) => {
             console.log(`🔍 [ADMIN SYNC] detected for ${userEmail}. Fetching all digital products...`);
             // Admin FORCE SYNC: They always get access to ALL digital products
             // Using case-insensitive regex to catch EBOOK, Ebook, E-Book, AUDIOBOOK, etc.
-            const allDigitalProducts = await Product.find({ 
+            const allDigitalProducts = await Product.find({
                 type: { $regex: /^(EBOOK|AUDIOBOOK|E-BOOK)$/i }
             });
             console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital products for ${req.user.email}`);
-            
+
             const adminDigitalItems = allDigitalProducts.map(p => ({
                 productId: p._id,
                 title: p.title,
@@ -39,7 +39,7 @@ router.get('/my-library', protect, async (req, res) => {
             // Smart Merge: Start with all products (active), then overwrite with user's specific progress/hidden status
             const itemsMap = new Map();
             adminDigitalItems.forEach(item => itemsMap.set(item.productId.toString(), item));
-            
+
             // Overwrite with actual library data (which might have progress, or be 'hidden')
             if (rawItems && Array.isArray(rawItems)) {
                 rawItems.forEach(item => {
@@ -283,8 +283,8 @@ router.delete('/my-library/:productId', protect, async (req, res) => {
             }
 
             // Find if product already exists in their specific entries
-            let item = library.items.find(i => 
-                (i.productId && i.productId.toString() === productId) || 
+            let item = library.items.find(i =>
+                (i.productId && i.productId.toString() === productId) ||
                 (i._id && i._id.toString() === productId)
             );
 
@@ -320,7 +320,7 @@ router.delete('/my-library/:productId', protect, async (req, res) => {
             if (!mongoose.Types.ObjectId.isValid(productId)) {
                 return res.status(400).json({ message: 'Invalid Product ID format' });
             }
-            
+
             const updatedLib = await DigitalLibrary.findOneAndUpdate(
                 { userId: user._id },
                 { $pull: { items: { productId: new mongoose.Types.ObjectId(productId) } } },
@@ -334,10 +334,10 @@ router.delete('/my-library/:productId', protect, async (req, res) => {
         }
     } catch (error) {
         console.error('ERROR in DELETE /my-library:', error);
-        res.status(500).json({ 
-            message: 'Error removing from library', 
+        res.status(500).json({
+            message: 'Error removing from library',
             error: error.message,
-            stack: error.stack 
+            stack: error.stack
         });
     }
 });

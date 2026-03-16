@@ -1273,7 +1273,9 @@ router.post('/verify-razorpay', protect, async (req, res) => {
             razorpay_signature,
             customer: directCustomer,
             items   : directItems,
-            couponCode
+            couponCode,
+            shippingCharge,
+            codCharge
         } = req.body;
 
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -1387,7 +1389,9 @@ router.post('/verify-razorpay', protect, async (req, res) => {
             }
         }
 
-        const finalPayable    = Math.round(totalAmount - discountAmount);
+        const sCharge = Number(shippingCharge) || 0;
+        const cCharge = Number(codCharge)      || 0;
+        const finalPayable    = Math.round(totalAmount - discountAmount + sCharge + cCharge);
         const isPurelyDigital = orderItems.every(i => i.type === 'EBOOK' || i.type === 'AUDIOBOOK');
 
         // 6. Create Order record
@@ -1404,6 +1408,8 @@ router.post('/verify-razorpay', protect, async (req, res) => {
             },
             items           : orderItems,
             totalAmount     : finalPayable,
+            shippingCharges : sCharge,
+            codCharges      : cCharge,
             discountAmount  : Math.round(discountAmount),
             couponCode      : appliedCouponCode,
             partnerRef      : partnerRef,
