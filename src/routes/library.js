@@ -10,13 +10,14 @@ router.get('/my-library', protect, async (req, res) => {
     try {
         let libraryData = await DigitalLibrary.findOne({ userId: req.user._id.toString() });
         let rawItems = libraryData ? (libraryData.items || []) : [];
-
+ 
         const isAdmin = req.user.role === 'admin' || (req.user.email && req.user.email.toLowerCase() === 'admin@uwo24.com');
 
         if (isAdmin) {
             // Admin FORCE SYNC: They always get access to ALL digital products
+            // Using case-insensitive regex to catch EBOOK, Ebook, E-Book, AUDIOBOOK, etc.
             const allDigitalProducts = await Product.find({ 
-                type: { $in: ['EBOOK', 'AUDIOBOOK'] } 
+                type: { $regex: /^(EBOOK|AUDIOBOOK|E-BOOK)$/i }
             });
             console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital products for ${req.user.email}`);
             

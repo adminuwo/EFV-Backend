@@ -30,25 +30,27 @@ router.get('/profile', protect, async (req, res) => {
             }
         }
 
-        const userObj = user.toObject();
-        delete userObj.password;
+        const userObj = user.toObject ? user.toObject() : JSON.parse(JSON.stringify(user));
+        if (userObj.password) delete userObj.password;
+
+        // Ensure notifications exist
+        if (!userObj.notifications) userObj.notifications = [];
 
         // Sort notifications: Welcome pinned to top, rest newest first
-        if (userObj.notifications && Array.isArray(userObj.notifications)) {
-            const welcomeNotes = userObj.notifications.filter(n =>
-                (n.title || '').toLowerCase().includes('welcome') || (n.message || '').toLowerCase().includes('welcome')
-            );
-            const otherNotes = userObj.notifications.filter(n =>
-                !(n.title || '').toLowerCase().includes('welcome') && !(n.message || '').toLowerCase().includes('welcome')
-            );
-            otherNotes.sort((a, b) => {
-                const dateA = new Date(a.createdAt || 0);
-                const dateB = new Date(b.createdAt || 0);
-                return dateB - dateA;
-            });
-            userObj.notifications = [...welcomeNotes, ...otherNotes];
-        }
+        const welcomeNotes = userObj.notifications.filter(n =>
+            (n.title || '').toLowerCase().includes('welcome') || (n.message || '').toLowerCase().includes('welcome')
+        );
+        const otherNotes = userObj.notifications.filter(n =>
+            !(n.title || '').toLowerCase().includes('welcome') && !(n.message || '').toLowerCase().includes('welcome')
+        );
+        
+        otherNotes.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA;
+        });
 
+        userObj.notifications = [...welcomeNotes, ...otherNotes];
         res.json(userObj);
 
     } catch (error) {
@@ -251,7 +253,7 @@ router.delete('/notifications/:id', protect, async (req, res) => {
         const initialCount = user.notifications.length;
 
         user.notifications = user.notifications.filter(n => {
-            const rawId = n._id || n.id;
+            const rawId = n._id || n.id; // Ensure compatibility for plain objects (JSON DB)
             if (!rawId) return true;
             const dbId = rawId.toString();
             return dbId !== reqId;
