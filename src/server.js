@@ -14,7 +14,44 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const connectDB = require('./config/db');
 
 // Connect to Database
-connectDB();
+connectDB().then(() => {
+    // Drop problematic index if it exists (legacyId uniqueness fix)
+    if (process.env.USE_JSON_DB !== 'true') {
+        const mongoose = require('mongoose');
+        const dropIndex = async () => {
+            try {
+                const collections = await mongoose.connection.db.listCollections({ name: 'products' }).toArray();
+                if (collections.length > 0) {
+                    await mongoose.connection.db.collection('products').dropIndex('legacyId_1');
+                    console.log('🗑️ Successfully dropped legacyId_1 unique index');
+                }
+            } catch (e) {
+                // Index might not exist, ignore
+            }
+        };
+
+        if (mongoose.connection.readyState === 1) {
+            dropIndex();
+        } else {
+            mongoose.connection.on('open', dropIndex);
+        }
+    }
+});
+
+// Ensure upload directories exist on startup
+const fs = require('fs');
+const uploadDirs = [
+    path.join(__dirname, 'uploads/covers'),
+    path.join(__dirname, 'uploads/ebooks'),
+    path.join(__dirname, 'uploads/gallery'),
+    path.join(__dirname, 'uploads/audios')
+];
+uploadDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        console.log(`📁 Created directory: ${dir}`);
+    }
+});
 
 const app = express();
 
@@ -115,10 +152,14 @@ app.use('/api/demo', require('./routes/demo'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/shipments', require('./routes/shipments'));
 app.use('/api/nimbus', nimbusShipping);
+app.use('/api/upload', require('./routes/upload'));
+
 
 // Static files (PDFs, Audio, Images)
 app.use('/content', express.static(path.join(__dirname, 'data', 'content')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(frontendPath));
+
 
 // Fallback for SPA
 app.get('*', (req, res) => {

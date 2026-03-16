@@ -63,7 +63,7 @@ const productSchema = new mongoose.Schema({
     description: String,
     volume: String, // e.g. "1", "2"
     language: { type: String, default: 'Hindi' }, // Hindi, English
-    legacyId: { type: String, sparse: true, unique: true }, // For string IDs like "efv_v1_audiobook"
+    legacyId: { type: String, sparse: true }, // Removed unique: true to avoid null collisions
 
     // Shipping Details (for Shiprocket)
     weight: { type: Number, default: 0 }, // in grams

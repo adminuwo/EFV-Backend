@@ -128,7 +128,7 @@ router.get('/my-library', protect, async (req, res) => {
             const id = synced.productId?.toString();
             const titleKey = `${synced.title}_${synced.type}`.toLowerCase().replace(/\s+/g, '');
 
-            if (id && !libraryMap.has(id) && !seenTitles.has(titleKey)) {
+            if (id && !libraryMap.has(id) && (isAdmin || !seenTitles.has(titleKey))) {
                 libraryMap.set(id, synced);
                 seenTitles.add(titleKey);
             }
