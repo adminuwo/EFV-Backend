@@ -71,9 +71,13 @@ router.get('/my-library', protect, async (req, res) => {
                 if (id) {
                     const existing = itemsMap.get(id);
                     if (existing) {
-                        // Merge! Keep its progress and status but use current product details
+                        // Merge! Keep library progress/status but FORCE current product details (title, path, thumbnail)
                         const userItem = item.toObject ? item.toObject() : item;
-                        itemsMap.set(id, { ...existing, ...userItem, productId: id });
+                        itemsMap.set(id, { 
+                            ...userItem, // contains progress, accessStatus, etc.
+                            ...existing, // Overwrites with LATEST product title, path, thumbnail
+                            productId: id 
+                        });
                     }
                 }
             });
@@ -270,52 +274,44 @@ router.post('/add', protect, async (req, res) => {
         }
 
         const userObjId = getUserObjId(req.user);
-        // Find by both ObjectId and string for backwards compatibility
-        let library = await DigitalLibrary.findOne({ 
-            $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
-        });
-        if (!library) {
-            console.log(`🆕 Creating new library for user: ${userObjId}`);
-            library = new DigitalLibrary({ userId: userObjId, items: [] });
-        }
+        if (!userObjId) return res.status(401).json({ success: false, message: 'User session invalid' });
 
-        // Check if already in library
-        // Check if already in library
-        const existingItemIndex = library.items.findIndex(item => 
-            (item.productId && item.productId.toString() === product._id.toString()) ||
-            (item._id && item._id.toString() === product._id.toString())
-        );
+        console.log(`🚀 [LIBRARY ADD] User: ${userObjId}, Product: ${product.title}`);
 
-        if (existingItemIndex > -1) {
-            const existingItem = library.items[existingItemIndex];
-            
-            // If it's there but hidden or inactive, reactivate it!
-            if (existingItem.accessStatus === 'hidden' || existingItem.accessStatus === 'inactive') {
-                existingItem.accessStatus = 'active';
-                existingItem.purchasedAt = new Date();
-                library.markModified('items');
-                await library.save();
-                return res.json({ success: true, message: 'Product reactivated in library', library });
-            }
-
-            // Already in library and active - return success (idempotent)
-            return res.json({ success: true, message: 'Product already in your library' });
-        }
-
-        // Add to library
-        library.items.push({
+        // Construct the item object
+        const libraryItem = {
             productId: product._id,
             title: product.title,
             type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
             thumbnail: product.thumbnail,
             filePath: product.filePath,
             purchasedAt: new Date(),
-            orderId: 'MANUAL',
             accessStatus: 'active'
-        });
+        };
 
-        await library.save();
-        res.status(201).json({ success: true, message: 'Product added to library successfully', library });
+        // Use atomic findOneAndUpdate to prevent race conditions (500 errors)
+        // We find by userId and if item doesn't exist in array, we $push it
+        // If it exists, we update its status to active
+        const result = await DigitalLibrary.findOneAndUpdate(
+            { 
+                $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
+            },
+            { 
+                $setOnInsert: { userId: userObjId },
+                $pull: { items: { productId: product._id } } // Remove if exists to re-add fresh (syncs path/title)
+            },
+            { upsert: true, new: true }
+        );
+
+        // Now push the fresh item
+        await DigitalLibrary.findOneAndUpdate(
+            { _id: result._id },
+            { $push: { items: libraryItem } },
+            { new: true }
+        );
+
+        console.log(`✅ [LIBRARY ADD] Success for ${product.title}`);
+        res.status(201).json({ success: true, message: 'Product added to library successfully' });
     } catch (error) {
         console.error('Error adding to library:', error);
         res.status(500).json({ 
