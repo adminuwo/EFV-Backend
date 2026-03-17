@@ -6,9 +6,17 @@ const { User, Purchase, Product, UserProgress, DigitalLibrary } = require('../mo
 
 // Helper to get a consistent ObjectId for userId
 function getUserObjId(user) {
-    // req.user._id is already ObjectId from Mongoose; use it directly
-    if (user._id && typeof user._id === 'object') return user._id;
-    return new mongoose.Types.ObjectId(user._id.toString());
+    if (!user || (!user._id && !user.id)) return null;
+    const id = user._id || user.id;
+    
+    // If it's already a valid ObjectId instance, return it
+    if (mongoose.Types.ObjectId.isValid(id) && typeof id === 'object' && id.toString() === id.toHexString()) return id;
+    
+    // Try converting from string if valid hex, else just use the string (for Mixed type fields)
+    if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) {
+        return new mongoose.Types.ObjectId(id);
+    }
+    return id; // Return as is (string) if not a hex ID
 }
 
 
@@ -58,18 +66,17 @@ router.get('/my-library', protect, async (req, res) => {
             adminDigitalItems.forEach(item => itemsMap.set(item.productId, item));
 
             // Overwrite with actual library data (which might have progress, or be 'hidden')
-            if (rawItems && Array.isArray(rawItems)) {
-                rawItems.forEach(item => {
-                    const id = (item.productId ? item.productId.toString() : (item._id ? item._id.toString() : null));
-                    if (id && itemsMap.has(id)) {
-                        // Overwrite global product data with user's specific library data (like hidden status or progress)
-                        const existing = itemsMap.get(id);
-                        const userSpecific = item.toObject ? item.toObject() : item;
-                        // Important: Make sure productId stays string
-                        itemsMap.set(id, { ...existing, ...userSpecific, productId: id });
+            rawItems.forEach(item => {
+                const id = (item.productId || item._id || '').toString();
+                if (id) {
+                    const existing = itemsMap.get(id);
+                    if (existing) {
+                        // Merge! Keep its progress and status but use current product details
+                        const userItem = item.toObject ? item.toObject() : item;
+                        itemsMap.set(id, { ...existing, ...userItem, productId: id });
                     }
-                });
-            }
+                }
+            });
 
             // For admins, we filter out anything explicitly marked as 'hidden'
             rawItems = Array.from(itemsMap.values()).filter(item => item.accessStatus !== 'hidden');
@@ -216,8 +223,11 @@ router.post('/add', protect, async (req, res) => {
         let product = null;
 
         // 1. Try finding by ID first
-        if (mongoose.Types.ObjectId.isValid(productId)) {
+        if (productId && typeof productId === 'string' && /^[0-9a-fA-F]{24}$/.test(productId)) {
             product = await Product.findById(productId);
+        } else if (productId) {
+            // Might be a legacy string ID or a direct string match
+            product = await Product.findOne({ _id: productId });
         }
 
         // 2. Fallback: Fuzzy matching by title (for Demo/Legacy IDs)
