@@ -40,8 +40,8 @@ async function fixIndex() {
         );
         console.log(`Updated ${result.modifiedCount} documents.`);
 
-        console.log('Re-creating sparse unique index for legacyId...');
-        await collection.createIndex({ legacyId: 1 }, { unique: true, sparse: true });
+        console.log('Re-creating sparse index for legacyId (non-unique)...');
+        await collection.createIndex({ legacyId: 1 }, { sparse: true });
         console.log('Index created successfully.');
 
         await mongoose.disconnect();

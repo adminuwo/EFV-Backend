@@ -1,0 +1,87 @@
+=== DIGITAL PRODUCTS ===
+EFV™ VOL 1: ORIGIN CODE™ | EBOOK | English
+  ID: 69b2865b058ac23ed348dcda
+  filePath: uploads/ebooks/ebook-1773477511374-502193328-uwo___company_deck.pdf
+  chapters: 0
+---
+EFV™ VOL 1: ORIGIN CODE™ | AUDIOBOOK | Hindi
+  ID: 69b2865b058ac23ed348dcdd
+  filePath: uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a
+  chapters: 23
+    ch0: Chapter 1 -> uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a
+    ch1: Chapter 2 -> uploads/audios/chapter_1-1772336834508-966930659-chp_2_vol_1__1_.m4a
+    ch2: Chapter 3 -> uploads/audios/chapter_2-1772336835855-264818898-chp_3_vol_1.m4a
+    ch3: Chapter 4 -> uploads/audios/chapter_3-1772336837207-487692688-chp_4_vol_1.m4a
+    ch4: Chapter 5 -> uploads/audios/chapter_4-1772336838608-965984080-chp_5_vol_1.m4a
+    ch5: Chapter 6 -> uploads/audios/chapter_5-1772336839946-135318954-chp_6_vol_1.m4a
+    ch6: Chapter 7 -> uploads/audios/chapter_6-1772336841358-176561829-chp_7_vol_1.m4a
+    ch7: Chapter 8 -> uploads/audios/chapter_7-1772336842776-68675651-chp_8_vol_1.m4a
+    ch8: Chapter 9 -> uploads/audios/chapter_8-1772336844159-346574711-chp_9_vol_1.m4a
+    ch9: Chapter 10 -> uploads/audios/chapter_9-1772336845288-15124952-chp_10_vol_1.m4a
+    ch10: Chapter 11 -> uploads/audios/chapter_10-1772336846445-100730093-chp_11_vol_1.m4a
+    ch11: Chapter 12 -> uploads/audios/chapter_11-1772336847779-769503459-chp_12_vol_1.m4a
+    ch12: Chapter 13 -> uploads/audios/chapter_12-1772336848899-435379231-chp_13_vol_1.m4a
+    ch13: Chapter 14 -> uploads/audios/chapter_13-1772336850280-826606806-chp_14_vol_1.m4a
+    ch14: Chapter 15 -> uploads/audios/chapter_14-1772336851248-301428907-chp_15_vol_1.m4a
+    ch15: Chapter 16 -> uploads/audios/chapter_15-1772336852371-230177956-chp_16_vol_1.m4a
+    ch16: Chapter 17 -> uploads/audios/chapter_16-1772336853249-533601284-chp_17_vol_1.m4a
+    ch17: Chapter 18 -> uploads/audios/chapter_17-1772336854674-129016230-chp_18_vol_1.m4a
+    ch18: Chapter 19 -> uploads/audios/chapter_18-1772336855922-219958373-chp_19_vol_1.m4a
+    ch19: Chapter 20 -> uploads/audios/chapter_19-1772336856967-424126203-chp_20_vol_1.m4a
+    ch20: Chapter 21 -> uploads/audios/chapter_20-1772336858642-93739183-chp_21_vol_1.m4a
+    ch21: Chapter 22 -> uploads/audios/chapter_21-1772336860451-303927924-chp_22_vol_1.m4a
+    ch22: Chapter 23 -> uploads/audios/chapter_22-1772336861967-450263877-chp_23_vol_1.m4a
+---
+EFV™ VOL 2: MINDOS™ | EBOOK | Hindi
+  ID: 69b2865b058ac23ed348dcf3
+  filePath: uploads/ebooks/ebook-1773728683762-517364691-efv_invoice_ord_357544432.pdf
+  chapters: 0
+---
+EFV™ VOL 2: MINDOS™ | AUDIOBOOK | Hindi
+  ID: 69b2865b058ac23ed348dcf6
+  filePath: ebooks/ebook-1771411253035-753162584.pdf
+  chapters: 0
+---
+EFV™ VOL 1: ORIGIN CODE™ | AUDIOBOOK | English
+  ID: 69b5284778bb3f967f629441
+  filePath: uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a
+  chapters: 23
+    ch0: Chapter 1 -> uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a
+    ch1: Chapter 2 -> uploads/audios/chapter_1-1772336834508-966930659-chp_2_vol_1__1_.m4a
+    ch2: Chapter 3 -> uploads/audios/chapter_2-1772336835855-264818898-chp_3_vol_1.m4a
+    ch3: Chapter 4 -> uploads/audios/chapter_3-1772336837207-487692688-chp_4_vol_1.m4a
+    ch4: Chapter 5 -> uploads/audios/chapter_4-1772336838608-965984080-chp_5_vol_1.m4a
+    ch5: Chapter 6 -> uploads/audios/chapter_5-1772336839946-135318954-chp_6_vol_1.m4a
+    ch6: Chapter 7 -> uploads/audios/chapter_6-1772336841358-176561829-chp_7_vol_1.m4a
+    ch7: Chapter 8 -> uploads/audios/chapter_7-1772336842776-68675651-chp_8_vol_1.m4a
+    ch8: Chapter 9 -> uploads/audios/chapter_8-1772336844159-346574711-chp_9_vol_1.m4a
+    ch9: Chapter 10 -> uploads/audios/chapter_9-1772336845288-15124952-chp_10_vol_1.m4a
+    ch10: Chapter 11 -> uploads/audios/chapter_10-1772336846445-100730093-chp_11_vol_1.m4a
+    ch11: Chapter 12 -> uploads/audios/chapter_11-1772336847779-769503459-chp_12_vol_1.m4a
+    ch12: Chapter 13 -> uploads/audios/chapter_12-1772336848899-435379231-chp_13_vol_1.m4a
+    ch13: Chapter 14 -> uploads/audios/chapter_13-1772336850280-826606806-chp_14_vol_1.m4a
+    ch14: Chapter 15 -> uploads/audios/chapter_14-1772336851248-301428907-chp_15_vol_1.m4a
+    ch15: Chapter 16 -> uploads/audios/chapter_15-1772336852371-230177956-chp_16_vol_1.m4a
+    ch16: Chapter 17 -> uploads/audios/chapter_16-1772336853249-533601284-chp_17_vol_1.m4a
+    ch17: Chapter 18 -> uploads/audios/chapter_17-1772336854674-129016230-chp_18_vol_1.m4a
+    ch18: Chapter 19 -> uploads/audios/chapter_18-1772336855922-219958373-chp_19_vol_1.m4a
+    ch19: Chapter 20 -> uploads/audios/chapter_19-1772336856967-424126203-chp_20_vol_1.m4a
+    ch20: Chapter 21 -> uploads/audios/chapter_20-1772336858642-93739183-chp_21_vol_1.m4a
+    ch21: Chapter 22 -> uploads/audios/chapter_21-1772336860451-303927924-chp_22_vol_1.m4a
+    ch22: Chapter 23 -> uploads/audios/chapter_22-1772336861967-450263877-chp_23_vol_1.m4a
+---
+EFV™ VOL 1: ORIGIN CODE™ | EBOOK | Hindi
+  ID: 69b5284778bb3f967f62945a
+  filePath: uploads/ebooks/ebook-1773647770492-846831096-efv_invoice_ord_357544432.pdf
+  chapters: 0
+---
+EFV™ VOL 2: MINDOS™ | AUDIOBOOK | English
+  ID: 69b5284778bb3f967f629460
+  filePath: ebooks/ebook-1771411253035-753162584.pdf
+  chapters: 0
+---
+EFV™ VOL 2: MINDOS™ | EBOOK | English
+  ID: 69b5284778bb3f967f629462
+  filePath: ebooks/ebook-1771411240159-635425919.pdf
+  chapters: 0
+---

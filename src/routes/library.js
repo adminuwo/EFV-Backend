@@ -33,7 +33,7 @@ router.get('/my-library', protect, async (req, res) => {
             console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital items out of ${allProducts.length} total.`);
 
             const adminDigitalItems = allDigitalProducts.map(p => ({
-                productId: p._id,
+                productId: p._id.toString(), // CRITICAL FIX: Ensure returning string, not ObjectId, to avoid undefined _id issues in UI
                 title: p.title,
                 type: (p.type || '').toUpperCase().includes('AUDIO') ? 'Audiobook' : 'E-Book',
                 thumbnail: p.thumbnail,
@@ -45,7 +45,7 @@ router.get('/my-library', protect, async (req, res) => {
 
             // Smart Merge: Start with all products (active), then overwrite with user's specific progress/hidden status
             const itemsMap = new Map();
-            adminDigitalItems.forEach(item => itemsMap.set(item.productId.toString(), item));
+            adminDigitalItems.forEach(item => itemsMap.set(item.productId, item));
 
             // Overwrite with actual library data (which might have progress, or be 'hidden')
             if (rawItems && Array.isArray(rawItems)) {
@@ -55,7 +55,8 @@ router.get('/my-library', protect, async (req, res) => {
                         // Overwrite global product data with user's specific library data (like hidden status or progress)
                         const existing = itemsMap.get(id);
                         const userSpecific = item.toObject ? item.toObject() : item;
-                        itemsMap.set(id, { ...existing, ...userSpecific });
+                        // Important: Make sure productId stays string
+                        itemsMap.set(id, { ...existing, ...userSpecific, productId: id });
                     }
                 });
             }

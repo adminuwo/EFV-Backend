@@ -90,10 +90,23 @@ router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
             return res.status(404).json({ message: 'E-Book not found' });
         }
 
-        const uploadStore = path.join(__dirname, '../');
-        const fullPath = path.resolve(uploadStore, product.filePath);
+        if (!product.filePath) {
+            console.error(`❌ EBOOK: No filePath set for product ${product._id} (${product.title})`);
+            return res.status(404).json({ message: 'E-Book file path not configured. Please upload the ebook file.' });
+        }
 
-        if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File not found on server' });
+        const uploadStore = path.join(__dirname, '../');
+        // Auto-fix legacy paths: ebooks/ -> uploads/ebooks/
+        let filePath = product.filePath;
+        if (filePath.startsWith('ebooks/')) filePath = 'uploads/' + filePath;
+        const fullPath = path.resolve(uploadStore, filePath);
+
+        console.log(`📖 EBOOK STREAM: Product=${product._id}, filePath=${filePath}, fullPath=${fullPath}, exists=${fs.existsSync(fullPath)}`);
+
+        if (!fs.existsSync(fullPath)) {
+            console.error(`❌ EBOOK FILE MISSING: ${fullPath}`);
+            return res.status(404).json({ message: 'PDF file not found on server. Please ensure the file was uploaded correctly.' });
+        }
 
         const stat = fs.statSync(fullPath);
         const fileSize = stat.size;
@@ -144,9 +157,18 @@ router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
             return res.status(404).json({ message: 'Audiobook not found' });
         }
 
-        const uploadStore = path.join(__dirname, '../');
-        const fullPath = path.resolve(uploadStore, product.filePath);
+        if (!product.filePath) {
+            console.error(`❌ AUDIO: No filePath for product ${product._id} (${product.title})`);
+            return res.status(404).json({ message: 'Audio file path not configured.' });
+        }
 
+        const uploadStore = path.join(__dirname, '../');
+        // Auto-fix legacy paths
+        let filePath = product.filePath;
+        if (filePath.startsWith('audios/')) filePath = 'uploads/' + filePath;
+        const fullPath = path.resolve(uploadStore, filePath);
+
+        console.log(`🎧 AUDIO STREAM: Product=${product._id}, fullPath=${fullPath}, exists=${fs.existsSync(fullPath)}`);
         streamAudioFile(fullPath, req, res);
     } catch (error) {
         res.status(500).json({ message: 'Audio streaming error' });
@@ -179,7 +201,17 @@ router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async
         }
 
         const uploadStore = path.join(__dirname, '../');
-        const fullPath = path.resolve(uploadStore, chapter.filePath);
+        // Auto-fix legacy paths
+        let chFilePath = chapter.filePath;
+        if (chFilePath.startsWith('audios/')) chFilePath = 'uploads/' + chFilePath;
+        const fullPath = path.resolve(uploadStore, chFilePath);
+
+        console.log(`🎵 CHAPTER STREAM: Product=${req.params.productId}, Ch=${chapterIndex}, fullPath=${fullPath}, exists=${fs.existsSync(fullPath)}`);
+
+        if (!fs.existsSync(fullPath)) {
+            console.error(`❌ CHAPTER FILE MISSING: ${fullPath}`);
+            return res.status(404).json({ message: `Chapter ${chapterIndex + 1} audio file not found on server.` });
+        }
 
         streamAudioFile(fullPath, req, res);
     } catch (error) {
