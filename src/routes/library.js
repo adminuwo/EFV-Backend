@@ -4,13 +4,23 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { User, Purchase, Product, UserProgress, DigitalLibrary } = require('../models');
 
+// Helper to get a consistent ObjectId for userId
+function getUserObjId(user) {
+    // req.user._id is already ObjectId from Mongoose; use it directly
+    if (user._id && typeof user._id === 'object') return user._id;
+    return new mongoose.Types.ObjectId(user._id.toString());
+}
+
 
 // Get user's digital library
 router.get('/test-ping', (req, res) => res.json({ message: 'Library Route v1.3 is ACTIVE', timestamp: new Date() }));
 
 router.get('/my-library', protect, async (req, res) => {
     try {
-        let libraryData = await DigitalLibrary.findOne({ userId: req.user._id.toString() });
+        const userObjId = getUserObjId(req.user);
+        let libraryData = await DigitalLibrary.findOne({ 
+            $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
+        });
         let rawItems = libraryData ? (libraryData.items || []) : [];
 
         const userEmail = (req.user.email || '').toLowerCase().trim();
@@ -249,11 +259,14 @@ router.post('/add', protect, async (req, res) => {
             });
         }
 
-        const libraryUserId = userId.toString();
-        let library = await DigitalLibrary.findOne({ userId: libraryUserId });
+        const userObjId = getUserObjId(req.user);
+        // Find by both ObjectId and string for backwards compatibility
+        let library = await DigitalLibrary.findOne({ 
+            $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
+        });
         if (!library) {
-            console.log(`🆕 Creating new library for user: ${libraryUserId}`);
-            library = new DigitalLibrary({ userId: libraryUserId, items: [] });
+            console.log(`🆕 Creating new library for user: ${userObjId}`);
+            library = new DigitalLibrary({ userId: userObjId, items: [] });
         }
 
         // Check if already in library
@@ -315,10 +328,13 @@ router.delete('/my-library/:productId', protect, async (req, res) => {
         if (isAdmin) {
             // Admin logic: Instead of removing from a collection they don't strictly "own" 
             // (since they override all products), we mark the item as 'hidden' in THEIR library.
-            let library = await DigitalLibrary.findOne({ userId: user._id });
+            const userObjId = getUserObjId(user);
+            let library = await DigitalLibrary.findOne({ 
+                $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
+            });
             if (!library) {
                 console.log('Creating new library for admin');
-                library = new DigitalLibrary({ userId: user._id, items: [] });
+                library = new DigitalLibrary({ userId: userObjId, items: [] });
             }
 
             // Find if product already exists in their specific entries
@@ -367,8 +383,9 @@ router.delete('/my-library/:productId', protect, async (req, res) => {
                 return res.status(400).json({ message: 'Invalid Product ID format' });
             }
 
+            const delUserObjId = getUserObjId(user);
             const updatedLib = await DigitalLibrary.findOneAndUpdate(
-                { userId: user._id },
+                { $or: [{ userId: delUserObjId }, { userId: delUserObjId.toString() }] },
                 { $pull: { items: { productId: new mongoose.Types.ObjectId(productId) } } },
                 { new: true }
             );
