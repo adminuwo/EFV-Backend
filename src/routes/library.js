@@ -240,7 +240,14 @@ router.post('/add', protect, async (req, res) => {
             }
         }
 
-        if (!product) return res.status(404).json({ message: 'Product not found' });
+        if (!product) {
+            console.warn(`⚠️ [LIBRARY ADD] Product not found for ID: ${productId}`);
+            return res.status(404).json({ 
+                success: false,
+                message: `Product with ID ${productId} not found in database.`,
+                receivedId: productId
+            });
+        }
 
         const libraryUserId = userId.toString();
         let library = await DigitalLibrary.findOne({ userId: libraryUserId });
