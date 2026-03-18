@@ -1,14 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const { protect, validatePurchase } = require('../middleware/auth');
-const { getFileStream } = require('../services/storage');
 const { Product } = require('../models');
+const { Storage } = require('@google-cloud/storage');
 
 const fs = require('fs');
 const path = require('path');
 
+// Initialize GCS for private streaming
+const hasGCS = process.env.GCS_BUCKET_NAME && process.env.GCS_BUCKET_NAME !== 'efv-assets-bucket';
+
+let storage;
+if (hasGCS) {
+    storage = new Storage({
+        projectId: process.env.GCS_PROJECT_ID,
+        // Intentionally omitted keyFilename to force Application Default Credentials (ADC)
+    });
+}
+
 const getMimeType = (filePath) => {
-    const ext = path.extname(filePath).toLowerCase();
+    const ext = path.extname(filePath.split('?')[0].split('#')[0]).toLowerCase();
     const map = {
         '.pdf': 'application/pdf',
         '.epub': 'application/epub+zip',
@@ -29,194 +40,173 @@ const getMimeType = (filePath) => {
     return map[ext] || 'application/octet-stream';
 };
 
-// Helper: Find product by ObjectId or legacyId (string)
-async function findProductById(id) {
-    const isObjectId = /^[a-f\d]{24}$/i.test(id);
-    let product = null;
-    if (isObjectId) {
-        product = await Product.findById(id);
-    }
-    if (!product) {
-        product = await Product.findOne({ legacyId: id });
-    }
-    return product;
-}
-
-const streamAudioFile = (filePath, req, res) => {
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Audio file not found' });
-
-    const stat = fs.statSync(filePath);
-    const fileSize = stat.size;
-    const range = req.headers.range;
-    const mimeType = getMimeType(filePath);
-
-    // Security headers - prevent download
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-
-    if (range) {
-        const parts = range.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunksize = (end - start) + 1;
-        const file = fs.createReadStream(filePath, { start, end });
-
-        res.writeHead(206, {
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': chunksize,
-            'Content-Type': mimeType,
-            'Cache-Control': 'no-store'
-        });
-        file.pipe(res);
-    } else {
-        res.writeHead(200, {
-            'Content-Length': fileSize,
-            'Content-Type': mimeType,
-            'Accept-Ranges': 'bytes',
-            'Cache-Control': 'no-store'
-        });
-        fs.createReadStream(filePath).pipe(res);
-    }
+// HELPER: Extract relative path from GCS URL
+const getGcsRelativePath = (fullUrl) => {
+    if (!fullUrl) return null;
+    // URL looks like https://storage.googleapis.com/efvframework/ebooks/file.pdf
+    try {
+        const parts = fullUrl.split(`${process.env.GCS_BUCKET_NAME}/`);
+        if (parts.length > 1) return parts[1];
+    } catch (e) {}
+    return null;
 };
 
-// Secure E-Book Streaming
-router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// PROXY STREAMER: Fetches from private GCS and pipes to response
+// ─────────────────────────────────────────────────────────────────────────────
+const streamFromGCS = async (gcsPath, req, res) => {
     try {
-        const product = await findProductById(req.params.productId);
-        if (!product || product.type !== 'EBOOK') {
-            return res.status(404).json({ message: 'E-Book not found' });
-        }
+        const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
+        const file = bucket.file(gcsPath);
 
-        if (!product.filePath) {
-            console.error(`❌ EBOOK: No filePath set for product ${product._id} (${product.title})`);
-            return res.status(404).json({ message: 'E-Book file path not configured. Please upload the ebook file.' });
-        }
+        const [metadata] = await file.getMetadata();
+        const fileSize = parseInt(metadata.size);
+        const mimeType = metadata.contentType || getMimeType(gcsPath);
 
-        const uploadStore = path.join(__dirname, '../');
-        // Auto-fix legacy paths: ebooks/ -> uploads/ebooks/
-        let filePath = product.filePath;
-        if (filePath.startsWith('ebooks/')) filePath = 'uploads/' + filePath;
-        const fullPath = path.resolve(uploadStore, filePath);
-
-        console.log(`📖 EBOOK STREAM: Product=${product._id}, filePath=${filePath}, fullPath=${fullPath}, exists=${fs.existsSync(fullPath)}`);
-
-        if (!fs.existsSync(fullPath)) {
-            console.error(`❌ EBOOK FILE MISSING: ${fullPath}`);
-            return res.status(404).json({ message: 'PDF file not found on server. Please ensure the file was uploaded correctly.' });
-        }
-
-        const stat = fs.statSync(fullPath);
-        const fileSize = stat.size;
-        const range = req.headers.range;
-        const mimeType = getMimeType(product.filePath);
-
-        // Security headers - prevent download
+        // Standard Security Headers
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         res.setHeader('X-Content-Type-Options', 'nosniff');
         res.setHeader('Content-Disposition', 'inline');
-        res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 
+        const range = req.headers.range;
         if (range) {
             const parts = range.replace(/bytes=/, '').split('-');
             const start = parseInt(parts[0], 10);
             const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
             const chunksize = (end - start) + 1;
-            const file = fs.createReadStream(fullPath, { start, end });
 
             res.writeHead(206, {
                 'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                 'Accept-Ranges': 'bytes',
                 'Content-Length': chunksize,
                 'Content-Type': mimeType,
-                'Cache-Control': 'no-store'
             });
-            file.pipe(res);
+
+            file.createReadStream({ start, end }).pipe(res);
         } else {
             res.writeHead(200, {
                 'Content-Length': fileSize,
                 'Content-Type': mimeType,
                 'Accept-Ranges': 'bytes',
-                'Cache-Control': 'no-store'
             });
-            fs.createReadStream(fullPath).pipe(res);
+            file.createReadStream().pipe(res);
         }
     } catch (error) {
-        console.error('🔥 EBOOK STREAM ERROR:', error);
-        res.status(500).json({ message: `Streaming error: ${error.message}` });
+        console.error('❌ GCS Stream Error:', error);
+        res.status(404).json({ message: 'File could not be fetched from cloud storage.' });
+    }
+};
+
+const streamLocalFile = (fullPath, req, res) => {
+    if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'Local file not found.' });
+    const stat = fs.statSync(fullPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    const mimeType = getMimeType(fullPath);
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    
+    if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': (end - start) + 1,
+            'Content-Type': mimeType,
+        });
+        fs.createReadStream(fullPath, { start, end }).pipe(res);
+    } else {
+        res.writeHead(200, {
+            'Content-Length': fileSize,
+            'Content-Type': mimeType,
+            'Accept-Ranges': 'bytes',
+        });
+        fs.createReadStream(fullPath).pipe(res);
+    }
+};
+
+// Helper: Find product
+async function findProductById(id) {
+    const isObjectId = /^[a-f\d]{24}$/i.test(id);
+    return isObjectId ? await Product.findById(id) : await Product.findOne({ legacyId: id });
+}
+
+// 📖 Secure E-Book Endpoint
+router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
+    try {
+        const product = await findProductById(req.params.productId);
+        if (!product || !product.filePath) return res.status(404).json({ message: 'E-Book not found' });
+
+        if (product.filePath.startsWith('http') && hasGCS) {
+            const relPath = getGcsRelativePath(product.filePath);
+            if (relPath) {
+                // Generate a signed URL valid for 1 hour
+                const options = {
+                    version: 'v4',
+                    action: 'read',
+                    expires: Date.now() + 60 * 60 * 1000, // 1 hour
+                };
+                
+                const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                return res.redirect(url); // Redirect the client to the signed URL
+            }
+        }
+
+        const fullPath = path.resolve(__dirname, '../', product.filePath.startsWith('ebooks/') ? 'uploads/' + product.filePath : product.filePath);
+        streamLocalFile(fullPath, req, res);
+    } catch (error) {
+        console.error('EBOOK signed URL error:', error);
+        res.status(500).json({ message: error.message });
     }
 });
 
-// Secure Audiobook Streaming (legacy single-file)
+// 🎧 Secure Audiobook Endpoint
 router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
     try {
         const product = await findProductById(req.params.productId);
-        if (!product || product.type !== 'AUDIOBOOK') {
-            return res.status(404).json({ message: 'Audiobook not found' });
+        if (!product || !product.filePath) return res.status(404).json({ message: 'Audiobook not found' });
+
+        if (product.filePath.startsWith('http') && hasGCS) {
+            const relPath = getGcsRelativePath(product.filePath);
+            if (relPath) {
+                const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
+                const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                return res.redirect(url);
+            }
         }
 
-        if (!product.filePath) {
-            console.error(`❌ AUDIO: No filePath for product ${product._id} (${product.title})`);
-            return res.status(404).json({ message: 'Audio file path not configured.' });
-        }
-
-        const uploadStore = path.join(__dirname, '../');
-        // Auto-fix legacy paths
-        let filePath = product.filePath;
-        if (filePath.startsWith('audios/')) filePath = 'uploads/' + filePath;
-        const fullPath = path.resolve(uploadStore, filePath);
-
-        console.log(`🎧 AUDIO STREAM: Product=${product._id}, fullPath=${fullPath}, exists=${fs.existsSync(fullPath)}`);
-        streamAudioFile(fullPath, req, res);
+        const fullPath = path.resolve(__dirname, '../', product.filePath.startsWith('audios/') ? 'uploads/' + product.filePath : product.filePath);
+        streamLocalFile(fullPath, req, res);
     } catch (error) {
-        res.status(500).json({ message: 'Audio streaming error' });
+        console.error('AUDIO signed URL error:', error);
+        res.status(500).json({ message: 'Audio stream error' });
     }
 });
 
-// ─── CHAPTER AUDIO STREAMING ────────────────────────────────────────────────
-// GET /api/content/chapter/:productId/:chapterIndex
-// Streams a specific chapter's audio. chapterIndex is 0-based.
+// 🎵 Chapter Endpoint
 router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async (req, res) => {
     try {
         const product = await findProductById(req.params.productId);
-        if (!product || product.type !== 'AUDIOBOOK') {
-            return res.status(404).json({ message: 'Audiobook not found' });
+        const idx = parseInt(req.params.chapterIndex);
+        const chapter = (product?.chapters || []).sort((a, b) => a.chapterNumber - b.chapterNumber)[idx];
+        if (!chapter?.filePath) return res.status(404).json({ message: 'Chapter not found' });
+
+        if (chapter.filePath.startsWith('http') && hasGCS) {
+            const relPath = getGcsRelativePath(chapter.filePath);
+            if (relPath) {
+                const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
+                const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                return res.redirect(url);
+            }
         }
 
-        const chapterIndex = parseInt(req.params.chapterIndex, 10);
-        if (isNaN(chapterIndex) || chapterIndex < 0) {
-            return res.status(400).json({ message: 'Invalid chapter index' });
-        }
-
-        // Find chapter by 0-based index (chapters array is sorted by chapterNumber)
-        const sortedChapters = (product.chapters || [])
-            .filter(c => c.filePath)
-            .sort((a, b) => a.chapterNumber - b.chapterNumber);
-
-        const chapter = sortedChapters[chapterIndex];
-        if (!chapter || !chapter.filePath) {
-            return res.status(404).json({ message: `Chapter ${chapterIndex + 1} not found or not uploaded yet` });
-        }
-
-        const uploadStore = path.join(__dirname, '../');
-        // Auto-fix legacy paths
-        let chFilePath = chapter.filePath;
-        if (chFilePath.startsWith('audios/')) chFilePath = 'uploads/' + chFilePath;
-        const fullPath = path.resolve(uploadStore, chFilePath);
-
-        console.log(`🎵 CHAPTER STREAM: Product=${req.params.productId}, Ch=${chapterIndex}, fullPath=${fullPath}, exists=${fs.existsSync(fullPath)}`);
-
-        if (!fs.existsSync(fullPath)) {
-            console.error(`❌ CHAPTER FILE MISSING: ${fullPath}`);
-            return res.status(404).json({ message: `Chapter ${chapterIndex + 1} audio file not found on server.` });
-        }
-
-        streamAudioFile(fullPath, req, res);
+        const fullPath = path.resolve(__dirname, '../', chapter.filePath.startsWith('audios/') ? 'uploads/' + chapter.filePath : chapter.filePath);
+        streamLocalFile(fullPath, req, res);
     } catch (error) {
-        console.error('Chapter stream error:', error);
-        res.status(500).json({ message: 'Chapter audio streaming error' });
+        console.error('CHAPTER signed URL error:', error);
+        res.status(500).json({ message: 'Chapter stream error' });
     }
 });
 
