@@ -53,7 +53,14 @@ const upload = multer({ storage: diskStorage, limits: { fileSize: 1000 * 1024 * 
 
 // Helper to manually upload local file to GCS
 const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
-    const bucket = storageClient.bucket(process.env.GCS_BUCKET_NAME);
+    // Determine which bucket to use
+    // If it's a cover or gallery (images), use the cover bucket if configured
+    let bucketName = process.env.GCS_BUCKET_NAME;
+    if ((fieldname === 'cover' || fieldname === 'gallery') && process.env.GCS_COVER_BUCKET_NAME) {
+        bucketName = process.env.GCS_COVER_BUCKET_NAME;
+    }
+    
+    const bucket = storageClient.bucket(bucketName);
     const safeName = originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     
@@ -74,7 +81,7 @@ const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
         resumable: true // helps with large files like audiobooks
     });
 
-    return `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${gcsFileName}`;
+    return `https://storage.googleapis.com/${bucketName}/${gcsFileName}`;
 };
 
 // Upload route
