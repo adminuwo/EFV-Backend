@@ -10,6 +10,59 @@ router.post('/message', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
+        // --- RAG: Knowledge Retrieval (LOCAL with Cache) ---
+        let ragContext = "";
+        if (!global.ragCache) global.ragCache = { text: "", lastSync: 0 };
+        
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const pdf = require('pdf-parse');
+            
+            const ragDir = path.join(__dirname, '..', 'uploads', 'rag');
+            const now = Date.now();
+
+            // Refresh cache if older than 5 minutes or empty
+            if (fs.existsSync(ragDir) && (now - global.ragCache.lastSync > 300000 || !global.ragCache.text)) {
+                const files = fs.readdirSync(ragDir);
+                let combinedText = "";
+                for (const fileName of files) {
+                    const filePath = path.join(ragDir, fileName);
+                    const buffer = fs.readFileSync(filePath);
+                    if (fileName.endsWith('.pdf')) {
+                        try {
+                            const data = await pdf(buffer);
+                            combinedText += `--- DOC: ${fileName} ---\n${data.text}\n\n`;
+                        } catch (e) { console.warn(`PDF Parse error (${fileName}):`, e.message); }
+                    } else if (fileName.endsWith('.txt')) {
+                        combinedText += `--- DOC: ${fileName} ---\n${buffer.toString()}\n\n`;
+                    }
+                }
+                global.ragCache.text = combinedText;
+                global.ragCache.lastSync = now;
+                console.log(`🧠 RAG Cache Updated (${files.length} files)`);
+            }
+
+            if (global.ragCache.text) {
+                const query = message.toLowerCase();
+                // Include shorter keywords like 'AI' (min 2 chars)
+                const keywords = query.split(/[^a-z0-9]/).filter(word => word.length >= 2);
+                
+                // Break into chunks of ~500 chars for finer search
+                const chunks = global.ragCache.text.split(/\n\n+|--- DOC:/);
+                const snippets = chunks.filter(chunk => 
+                    keywords.some(kw => chunk.toLowerCase().includes(kw))
+                ).slice(0, 8); // Take top 8 snippets
+
+                if (snippets.length > 0) {
+                    console.log(`✅ RAG Match: Found ${snippets.length} relevant snippets.`);
+                    ragContext = "\n\nKNOWLEDGE BASE CONTEXT:\n" + snippets.join("\n---\n") + "\n\n";
+                }
+            }
+        } catch (ragError) {
+            console.warn('⚠️ Local RAG Retrieval failed:', ragError.message);
+        }
+
         let text = '';
         let isDemoResponse = false;
 
@@ -25,8 +78,10 @@ router.post('/message', async (req, res) => {
                 }))
             });
 
-            // Send message and get response
-            const result = await chat.sendMessage(message);
+            // Send message with RAG context if found
+            const finalPrompt = ragContext ? `Using the following context from our knowledge base: ${ragContext}\n\nUser Question: ${message}` : message;
+            
+            const result = await chat.sendMessage(finalPrompt);
             const response = result.response;
             text = response.candidates[0].content.parts[0].text;
 

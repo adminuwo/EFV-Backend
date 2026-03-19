@@ -171,6 +171,8 @@ app.use('/api/shipments', require('./routes/shipments'));
 app.use('/api/nimbus', nimbusShipping);
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/images', require('./routes/images'));
+app.use('/api/rag', require('./routes/rag'));
+app.use('/api/chat', require('./routes/chat'));
 
 // Initial Seed (if DB empty)
 setTimeout(() => {

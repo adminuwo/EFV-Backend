@@ -1,74 +1,77 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-const { Storage } = require('@google-cloud/storage');
+const fs = require('fs');
 
-// Initialize GCS client
+// ─── Initialize GCS client (optional, graceful fallback if not available) ───
 let storage;
 try {
+    const { Storage } = require('@google-cloud/storage');
     storage = new Storage();
 } catch (e) {
-    console.error('❌ GCS Storage initialization failed:', e.message);
+    console.warn('⚠️ GCS Storage not initialized (local mode):', e.message);
 }
+
+// Local uploads base directory
+const uploadsDir = path.join(__dirname, '..', 'uploads');
 
 /**
- * Proxy function to stream a file from a private GCS bucket to the response.
+ * Try GCS first, fall back to local disk.
+ * filePath: e.g. "covers/cover-xxx.jpg" or "gallery/gallery-xxx.jpg"
  */
-async function proxyGCSFile(bucketName, filePath, res) {
-    if (!storage) {
-        return res.status(500).json({ message: 'Storage service unavailable' });
-    }
+async function serveImage(bucketName, filePath, subfolder, res) {
+    // 1️⃣ Try GCS first
+    if (storage && bucketName) {
+        try {
+            const bucket = storage.bucket(bucketName);
+            const file = bucket.file(filePath);
+            const [exists] = await file.exists();
 
-    try {
-        const bucket = storage.bucket(bucketName);
-        const file = bucket.file(filePath);
-
-        // Check if file exists
-        const [exists] = await file.exists();
-        if (!exists) {
-            return res.status(404).json({ message: 'File not found in bucket' });
-        }
-
-        // Get metadata for content-type
-        const [metadata] = await file.getMetadata();
-        
-        // Set headers
-        res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
-        res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-
-        // Stream the file
-        file.createReadStream()
-            .on('error', (err) => {
-                console.error(`Stream error for ${filePath}:`, err);
-                if (!res.headersSent) {
-                    res.status(500).json({ message: 'Error streaming file' });
-                }
-            })
-            .pipe(res);
-
-    } catch (error) {
-        console.error(`Proxy error for bucket ${bucketName}, file ${filePath}:`, error);
-        if (!res.headersSent) {
-            res.status(500).json({ message: 'Internal server error during image proxy' });
+            if (exists) {
+                const [metadata] = await file.getMetadata();
+                res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+                res.setHeader('Cache-Control', 'public, max-age=3600');
+                return file.createReadStream()
+                    .on('error', (err) => {
+                        if (!res.headersSent) res.status(500).send('Stream error');
+                    })
+                    .pipe(res);
+            }
+        } catch (e) {
+            console.warn(`⚠️ GCS error for ${filePath}:`, e.message);
         }
     }
+
+    // 2️⃣ Fall back to local disk
+    // filePath could be "covers/cover-xxx.jpg" → look in uploads/covers/cover-xxx.jpg
+    // or just the filename without folder
+    const localPaths = [
+        path.join(uploadsDir, filePath),
+        path.join(uploadsDir, subfolder, path.basename(filePath))
+    ];
+
+    for (const localPath of localPaths) {
+        if (fs.existsSync(localPath)) {
+            console.log(`📁 Serving local fallback: ${localPath}`);
+            return res.sendFile(localPath);
+        }
+    }
+
+    return res.status(404).json({ message: 'Image not found in GCS or local storage' });
 }
 
-// SECURE ROUTE: Serve cover images from private GCS
+// SECURE ROUTE: Serve cover images
 router.get('/cover/*', async (req, res) => {
-    // Path will be like /api/images/cover/vol1-cover.png
-    const filePath = req.params[0];
+    const filePath = req.params[0]; // e.g. "covers/cover-xxx.jpg"
     const bucketName = process.env.GCS_COVER_BUCKET_NAME || 'efvbookcover';
-    
-    await proxyGCSFile(bucketName, filePath, res);
+    await serveImage(bucketName, filePath, 'covers', res);
 });
 
-// SECURE ROUTE: Serve gallery/product images from main private GCS
+// SECURE ROUTE: Serve gallery images
 router.get('/gallery/*', async (req, res) => {
     const filePath = req.params[0];
     const bucketName = process.env.GCS_BUCKET_NAME || 'efvbucket';
-    
-    await proxyGCSFile(bucketName, filePath, res);
+    await serveImage(bucketName, filePath, 'gallery', res);
 });
 
 module.exports = router;
