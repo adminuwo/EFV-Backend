@@ -9,15 +9,19 @@ const router = express.Router();
 // ─────────────────────────────────────────────────────────────────────────────
 
 let storageClient = null;
+let storageInitialized = false;
 
 const initStorage = () => {
-    if (storageClient) return storageClient;
+    if (storageInitialized) return storageClient;
+    storageInitialized = true;
     try {
         const { Storage } = require('@google-cloud/storage');
         storageClient = new Storage({ projectId: process.env.GCS_PROJECT_ID || 'efvframework' });
+        console.log('☁️ [Images] GCS Storage client initialized');
         return storageClient;
     } catch (e) {
-        console.error('❌ GCS Storage client failed to init:', e.message);
+        console.error('❌ GCS Storage client failed to init in images.js:', e.message);
+        storageClient = null;
         return null;
     }
 };
