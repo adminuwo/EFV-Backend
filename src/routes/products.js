@@ -13,6 +13,84 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Bulk Create/Seed Products (Admin Only)
+router.post('/bulk-create', adminAuth, async (req, res) => {
+    try {
+        const products = req.body;
+        if (!Array.isArray(products)) {
+            return res.status(400).json({ message: 'Payload must be an array of products' });
+        }
+
+        const stats = { created: 0, skipped: 0 };
+        const results = [];
+
+        for (const pData of products) {
+            // Check if exists by legacyId or _id (if it looks like a string ID)
+            const idToMatch = pData._id;
+            const existing = await Product.findOne({ $or: [{ _id: idToMatch }, { legacyId: idToMatch }, { title: pData.title, type: pData.type }] });
+
+            if (existing) {
+                stats.skipped++;
+                continue;
+            }
+
+            // Clean data for Mongo (ID handled by Mongo unless it's a legacy string ID)
+            const newDoc = { ...pData };
+            if (pData._id && pData._id.startsWith('efv_')) {
+                // Keep the string ID for legacy products
+            } else {
+                delete newDoc._id; // Let Mongo generate _id
+            }
+
+            const product = await Product.create(newDoc);
+            results.push(product);
+            stats.created++;
+
+            // Automatically add to admin's library if it's a digital product
+            if (product.type === 'EBOOK' || product.type === 'AUDIOBOOK') {
+                try {
+                    const adminUser = await User.findOne({ email: /admin@uwo24\.com/i });
+                    const targets = [req.user._id];
+                    if (adminUser && adminUser._id.toString() !== req.user._id.toString()) {
+                        targets.push(adminUser._id);
+                    }
+                    for (let userId of targets) {
+                        let library = await DigitalLibrary.findOne({ userId: userId });
+                        if (!library) library = new DigitalLibrary({ userId: userId, items: [] });
+                        const exists = library.items.some(item => (item.productId && item.productId.toString() === product._id.toString()) || item.title === product.title);
+                        if (!exists) {
+                            library.items.push({
+                                productId: product._id,
+                                title: product.title,
+                                type: product.type,
+                                thumbnail: product.thumbnail,
+                                filePath: product.filePath
+                            });
+                            await library.save();
+                        }
+                    }
+                } catch (libErr) { console.error('Lib auto-add error:', libErr); }
+            }
+        }
+
+        res.json({ message: 'Bulk creation complete', stats });
+    } catch (error) {
+        console.error('Bulk create error:', error);
+        res.status(500).json({ message: 'Error during bulk creation' });
+    }
+});
+
+// Bulk Delete All Products (Admin Only)
+router.delete('/bulk-delete-all', adminAuth, async (req, res) => {
+    try {
+        await Product.deleteMany({});
+        res.json({ message: 'All products deleted successfully' });
+    } catch (error) {
+        console.error('Bulk delete error:', error);
+        res.status(500).json({ message: 'Error during bulk deletion' });
+    }
+});
+
 // Get single product (Public)
 router.get('/:id', async (req, res) => {
     try {
