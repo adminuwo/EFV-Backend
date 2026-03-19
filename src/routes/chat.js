@@ -23,24 +23,63 @@ router.post('/message', async (req, res) => {
             const now = Date.now();
 
             // Refresh cache if older than 5 minutes or empty
-            if (fs.existsSync(ragDir) && (now - global.ragCache.lastSync > 300000 || !global.ragCache.text)) {
-                const files = fs.readdirSync(ragDir);
+            if (now - global.ragCache.lastSync > 300000 || !global.ragCache.text) {
                 let combinedText = "";
-                for (const fileName of files) {
-                    const filePath = path.join(ragDir, fileName);
-                    const buffer = fs.readFileSync(filePath);
-                    if (fileName.endsWith('.pdf')) {
-                        try {
-                            const data = await pdf(buffer);
-                            combinedText += `--- DOC: ${fileName} ---\n${data.text}\n\n`;
-                        } catch (e) { console.warn(`PDF Parse error (${fileName}):`, e.message); }
-                    } else if (fileName.endsWith('.txt')) {
-                        combinedText += `--- DOC: ${fileName} ---\n${buffer.toString()}\n\n`;
+                let fileCount = 0;
+
+                // 1️⃣ Try Local Files
+                try {
+                    if (fs.existsSync(ragDir)) {
+                        const files = fs.readdirSync(ragDir);
+                        for (const fileName of files) {
+                            const filePath = path.join(ragDir, fileName);
+                            const buffer = fs.readFileSync(filePath);
+                            if (fileName.endsWith('.pdf')) {
+                                try {
+                                    const data = await pdf(buffer);
+                                    combinedText += `--- DOC (Local): ${fileName} ---\n${data.text}\n\n`;
+                                    fileCount++;
+                                } catch (e) { console.error(`❌ PDF Error (${fileName}):`, e.message); }
+                            } else if (fileName.endsWith('.txt')) {
+                                combinedText += `--- DOC (Local): ${fileName} ---\n${buffer.toString()}\n\n`;
+                                fileCount++;
+                            }
+                        }
                     }
+                } catch (err) { console.error('❌ Local RAG Load Error:', err.message); }
+
+                // 2️⃣ Try Cloud Files
+                const { Storage } = require('@google-cloud/storage');
+                const gcsBucketName = process.env.GCS_RAG_BUCKET_NAME || 'efvrag';
+                try {
+                    const storage = new Storage();
+                    const [gcsFiles] = await storage.bucket(gcsBucketName).getFiles();
+                    for (const file of gcsFiles) {
+                        if (fs.existsSync(path.join(ragDir, file.name))) continue; // Skip sync duplicates
+
+                        const [buffer] = await file.download();
+                        if (file.name.endsWith('.pdf')) {
+                            try {
+                                const data = await pdf(buffer);
+                                combinedText += `--- DOC (Cloud): ${file.name} ---\n${data.text}\n\n`;
+                                fileCount++;
+                            } catch (e) { console.error(`❌ Cloud PDF Error (${file.name}):`, e.message); }
+                        } else if (file.name.endsWith('.txt')) {
+                            combinedText += `--- DOC (Cloud): ${file.name} ---\n${buffer.toString()}\n\n`;
+                            fileCount++;
+                        }
+                    }
+                } catch (cloudErr) {
+                    console.warn('⚠️ Cloud GCS Sync skipped or failed:', cloudErr.message);
                 }
-                global.ragCache.text = combinedText;
-                global.ragCache.lastSync = now;
-                console.log(`🧠 RAG Cache Updated (${files.length} files)`);
+
+                if (combinedText) {
+                    global.ragCache.text = combinedText;
+                    global.ragCache.lastSync = now;
+                    console.log(`🧠 RAG CACHE UPDATED: Loaded ${fileCount} files, Total chars: ${combinedText.length}`);
+                } else {
+                    console.warn('⚠️ RAG CACHE EMPTY: No readable documents found locally or in cloud.');
+                }
             }
 
             if (global.ragCache.text) {
