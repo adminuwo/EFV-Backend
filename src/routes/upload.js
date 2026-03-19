@@ -56,7 +56,8 @@ const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
     // Determine which bucket to use
     // If it's a cover or gallery (images), use the cover bucket if configured
     let bucketName = process.env.GCS_BUCKET_NAME;
-    if ((fieldname === 'cover' || fieldname === 'gallery') && process.env.GCS_COVER_BUCKET_NAME) {
+    const isCoverOrGallery = (fieldname === 'cover' || fieldname === 'gallery');
+    if (isCoverOrGallery && process.env.GCS_COVER_BUCKET_NAME) {
         bucketName = process.env.GCS_COVER_BUCKET_NAME;
     }
     
@@ -81,6 +82,19 @@ const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
         resumable: true // helps with large files like audiobooks
     });
 
+    // For cover/gallery: return a BACKEND PROXY URL so the private bucket is not directly exposed.
+    // The /api/images/cover/* route will stream the image from GCS through the backend.
+    if (fieldname === 'cover' && process.env.GCS_COVER_BUCKET_NAME) {
+        // Store path without leading 'covers/' since our proxy route adds context
+        const proxyPath = gcsFileName; // e.g. covers/cover-xxx-name.jpg
+        return `/api/images/cover/${proxyPath}`;
+    }
+    if (fieldname === 'gallery') {
+        const objectName = gcsFileName.replace('gallery/', '');
+        return `/api/images/gallery/${objectName}`;
+    }
+
+    // For ebooks/audiobooks: use direct GCS URL (accessed through secure content API anyway)
     return `https://storage.googleapis.com/${bucketName}/${gcsFileName}`;
 };
 

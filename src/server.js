@@ -169,6 +169,7 @@ app.use('/api/payments', require('./routes/payments'));
 app.use('/api/shipments', require('./routes/shipments'));
 app.use('/api/nimbus', nimbusShipping);
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/images', require('./routes/images'));
 
 // Dynamic Frontend Configuration
 // Serving /js/api-config.js dynamically to inject BACKEND_URL from environment variables
