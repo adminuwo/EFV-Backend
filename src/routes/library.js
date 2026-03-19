@@ -21,7 +21,7 @@ function getUserObjId(user) {
 
 
 // Get user's digital library
-router.get('/test-ping', (req, res) => res.json({ message: 'Library Route v1.3 is ACTIVE', timestamp: new Date() }));
+router.get('/test-ping', (req, res) => res.json({ message: 'Library Route v1.4 is ACTIVE', timestamp: new Date() }));
 
 router.get('/my-library', protect, async (req, res) => {
     try {
@@ -30,61 +30,6 @@ router.get('/my-library', protect, async (req, res) => {
             $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
         });
         let rawItems = libraryData ? (libraryData.items || []) : [];
-
-        const userEmail = (req.user.email || '').toLowerCase().trim();
-        const isAdmin = req.user.role === 'admin' || userEmail === 'admin@uwo24.com';
-
-        if (isAdmin) {
-            console.log(`🔍 [ADMIN SYNC] Fetching all products for ${userEmail}`);
-            // Fetch EVERYTHING first to avoid any DB query issues
-            const allProducts = await Product.find({});
-            
-            // Filter in memory for digital items (EBOOK, AUDIOBOOK, or anything with a filePath)
-            const allDigitalProducts = allProducts.filter(p => {
-                const type = (p.type || '').toUpperCase();
-                return type.includes('EBOOK') || 
-                       type.includes('AUDIO') || 
-                       type.includes('DIGITAL') ||
-                       (p.filePath && p.filePath.length > 5);
-            });
-
-            console.log(`👨‍💼 Admin Library Sync: Found ${allDigitalProducts.length} digital items out of ${allProducts.length} total.`);
-
-            const adminDigitalItems = allDigitalProducts.map(p => ({
-                productId: p._id.toString(), // CRITICAL FIX: Ensure returning string, not ObjectId, to avoid undefined _id issues in UI
-                title: p.title,
-                type: (p.type || '').toUpperCase().includes('AUDIO') ? 'Audiobook' : 'E-Book',
-                thumbnail: p.thumbnail,
-                filePath: p.filePath,
-                purchasedAt: p.createdAt || new Date(),
-                accessStatus: 'active',
-                isAutoUnlocked: true 
-            }));
-
-            // Smart Merge: Start with all products (active), then overwrite with user's specific progress/hidden status
-            const itemsMap = new Map();
-            adminDigitalItems.forEach(item => itemsMap.set(item.productId, item));
-
-            // Overwrite with actual library data (which might have progress, or be 'hidden')
-            rawItems.forEach(item => {
-                const id = (item.productId || item._id || '').toString();
-                if (id) {
-                    const existing = itemsMap.get(id);
-                    if (existing) {
-                        // Merge! Keep library progress/status but FORCE current product details (title, path, thumbnail)
-                        const userItem = item.toObject ? item.toObject() : item;
-                        itemsMap.set(id, { 
-                            ...userItem, // contains progress, accessStatus, etc.
-                            ...existing, // Overwrites with LATEST product title, path, thumbnail
-                            productId: id 
-                        });
-                    }
-                }
-            });
-
-            // For admins, we filter out anything explicitly marked as 'hidden'
-            rawItems = Array.from(itemsMap.values()).filter(item => item.accessStatus !== 'hidden');
-        }
 
         // Helper to sync an item with latest product data
         const syncItemWithProduct = async (item) => {
@@ -97,7 +42,11 @@ router.get('/my-library', protect, async (req, res) => {
                     product = await Product.findById(productId);
                 }
 
-                // Fallback: Fuzzy matching by title (JSON adapter supports RegExp, NOT $regex object syntax)
+                if (!product && productId) {
+                    product = await Product.findOne({ _id: productId });
+                }
+
+                // Fallback: Fuzzy matching by title
                 if (!product) {
                     const searchTitle = (item.title || item.name || '').replace(/\(.*\)/, '').trim();
                     const productType = (item.type || '').toUpperCase()
@@ -122,7 +71,6 @@ router.get('/my-library', protect, async (req, res) => {
                         progress: item.progress || 0
                     };
                 }
-                // Return item as-is (still usable even without product enrichment)
                 return item;
             } catch (err) {
                 console.error('Library Item Sync Error:', err);
@@ -130,48 +78,19 @@ router.get('/my-library', protect, async (req, res) => {
             }
         };
 
-        // --- NEW: Demo/JSON Fallback ---
-        // --- NEW: Demo/JSON Fallback ---
-        let demoItems = [];
-        /* 
-        if (process.env.USE_JSON_DB === 'true' || rawItems.length === 0) {
-            try {
-                const JsonDB = require('../utils/jsonDB');
-                const demoUsersDB = new JsonDB('demo_users.json');
-                const demoUser = demoUsersDB.getById(req.user.email);
-
-                if (demoUser && demoUser.library) {
-                    demoItems = demoUser.library;
-                }
-            } catch (err) {
-                console.error('Demo fallback error:', err);
-            }
-        }
-        */
-
-        // Merge and process all items
-        const allItems = [...rawItems, ...demoItems];
-
-        // Use a Map to deduplicate by productId AND a Set for Titles to handle DB duplicates
+        // Use a Map to deduplicate by productId
         const libraryMap = new Map();
-        const seenTitles = new Set();
 
-        for (const item of allItems) {
+        for (const item of rawItems) {
             const synced = await syncItemWithProduct(item);
             const id = synced.productId?.toString();
-            const titleKey = `${synced.title}_${synced.type}`.toLowerCase().replace(/\s+/g, '');
 
-            if (id && !libraryMap.has(id) && (isAdmin || !seenTitles.has(titleKey))) {
+            if (id && !libraryMap.has(id)) {
                 libraryMap.set(id, synced);
-                seenTitles.add(titleKey);
             }
         }
 
         let library = Array.from(libraryMap.values());
-
-        // NOTE: Legacy fallback removed intentionally.
-        // Previously, if library was empty it re-synced from purchases — this caused deleted
-        // items to reappear. Now, an empty library = user has no items. That's correct behavior.
 
         // Sort by purchasedAt descending (Latest First)
         library.sort((a, b) => new Date(b.purchasedAt || 0) - new Date(a.purchasedAt || 0));
@@ -230,55 +149,33 @@ router.post('/add', protect, async (req, res) => {
         if (productId && typeof productId === 'string' && /^[0-9a-fA-F]{24}$/.test(productId)) {
             product = await Product.findById(productId);
         } else if (productId) {
-            // Might be a legacy string ID or a direct string match
             product = await Product.findOne({ _id: productId });
         }
 
-        // 2. Fallback: Fuzzy matching by title (for Demo/Legacy IDs)
+        // 2. Fallback: Fuzzy matching by title
         if (!product) {
-            // We don't have the title in the request body usually, 
-            // but we can try to find what the frontend might be sending if we had more info.
-            // However, for this POST /add, the frontend should ideally send the REAL ID if it matched it in mergeBackendData.
-            // If it didn't, we can't fuzzy match without a title.
-            // Let's check if the productId is one of our known demo IDs and map it manually if needed.
-
             const demoMap = {
-                // Hindi Editions (Match "ORIGIN CODE" but NOT "THE ORIGIN CODE")
                 'efv_v1_ebook': { title: /^EFV™ VOL 1: ORIGIN CODE™$/i, type: 'EBOOK' },
                 'efv_v1_audiobook': { title: /^EFV™ VOL 1: ORIGIN CODE™$/i, type: 'AUDIOBOOK' },
-
-                // English Editions (Match "THE ORIGIN CODE")
                 'efv_v1_ebook_en': { title: /THE ORIGIN CODE/i, type: 'EBOOK' },
                 'efv_v1_audiobook_en': { title: /THE ORIGIN CODE/i, type: 'AUDIOBOOK' },
-
                 'efv_v2_ebook': { title: /MINDOS/i, type: 'EBOOK' },
                 'efv_v2_audiobook': { title: /MINDOS/i, type: 'AUDIOBOOK' }
             };
 
             const demoSpec = demoMap[productId];
             if (demoSpec) {
-                product = await Product.findOne({
-                    title: demoSpec.title,
-                    type: demoSpec.type
-                });
+                product = await Product.findOne({ title: demoSpec.title, type: demoSpec.type });
             }
         }
 
         if (!product) {
-            console.warn(`⚠️ [LIBRARY ADD] Product not found for ID: ${productId}`);
-            return res.status(404).json({ 
-                success: false,
-                message: `Product with ID ${productId} not found in database.`,
-                receivedId: productId
-            });
+            return res.status(404).json({ success: false, message: `Product not found.`, receivedId: productId });
         }
 
         const userObjId = getUserObjId(req.user);
         if (!userObjId) return res.status(401).json({ success: false, message: 'User session invalid' });
 
-        console.log(`🚀 [LIBRARY ADD] User: ${userObjId}, Product: ${product.title}`);
-
-        // Construct the item object
         const libraryItem = {
             productId: product._id,
             title: product.title,
@@ -289,37 +186,49 @@ router.post('/add', protect, async (req, res) => {
             accessStatus: 'active'
         };
 
-        // Use atomic findOneAndUpdate to prevent race conditions (500 errors)
-        // We find by userId and if item doesn't exist in array, we $push it
-        // If it exists, we update its status to active
         const result = await DigitalLibrary.findOneAndUpdate(
-            { 
-                $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
-            },
+            { $or: [{ userId: userObjId }, { userId: userObjId.toString() }] },
             { 
                 $setOnInsert: { userId: userObjId },
-                $pull: { items: { productId: product._id } } // Remove if exists to re-add fresh (syncs path/title)
+                $pull: { items: { productId: product._id } } 
             },
             { upsert: true, new: true }
         );
 
-        // Now push the fresh item
         await DigitalLibrary.findOneAndUpdate(
             { _id: result._id },
             { $push: { items: libraryItem } },
             { new: true }
         );
 
-        console.log(`✅ [LIBRARY ADD] Success for ${product.title}`);
         res.status(201).json({ success: true, message: 'Product added to library successfully' });
     } catch (error) {
         console.error('Error adding to library:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error adding to library', 
-            error: error.message,
-            productId: req.body.productId 
-        });
+        res.status(500).json({ success: false, message: 'Error adding to library', error: error.message });
+    }
+});
+
+router.delete('/my-library/all', protect, async (req, res) => {
+    try {
+        const user = req.user;
+        const delUserObjId = getUserObjId(user);
+        
+        console.log(`🗑️ REMOVE ALL REQUEST: User=${user.email}`);
+
+        const updatedLib = await DigitalLibrary.findOneAndUpdate(
+            { $or: [{ userId: delUserObjId }, { userId: delUserObjId.toString() }] },
+            { $set: { items: [] } },
+            { new: true }
+        );
+
+        if (!updatedLib) {
+            return res.status(404).json({ message: 'Library not found' });
+        }
+        return res.json({ message: 'All items permanently removed from library', library: updatedLib });
+
+    } catch (error) {
+        console.error('ERROR in DELETE /my-library/all:', error);
+        res.status(500).json({ message: 'Error removing all from library', error: error.message });
     }
 });
 
@@ -327,87 +236,32 @@ router.delete('/my-library/:productId', protect, async (req, res) => {
     try {
         const { productId } = req.params;
         const user = req.user;
-        const isAdmin = user.role === 'admin' || (user.email && user.email.toLowerCase() === 'admin@uwo24.com');
 
-        console.log(`🗑️ REMOVE REQUEST: Product=${productId}, User=${user.email}, Admin=${isAdmin}`);
+        console.log(`🗑️ REMOVE REQUEST: Product=${productId}, User=${user.email}`);
 
-        if (isAdmin) {
-            // Admin logic: Instead of removing from a collection they don't strictly "own" 
-            // (since they override all products), we mark the item as 'hidden' in THEIR library.
-            const userObjId = getUserObjId(user);
-            let library = await DigitalLibrary.findOne({ 
-                $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
-            });
-            if (!library) {
-                console.log('Creating new library for admin');
-                library = new DigitalLibrary({ userId: userObjId, items: [] });
-            }
-
-            // Find if product already exists in their specific entries
-            let item = library.items.find(i =>
-                (i.productId && i.productId.toString() === productId) ||
-                (i._id && i._id.toString() === productId)
-            );
-
-            if (item) {
-                console.log('Marking existing item as hidden');
-                item.accessStatus = 'hidden';
-            } else {
-                console.log('Creating new hidden entry for admin');
+        const delUserObjId = getUserObjId(user);
+        
+        const queryMatch = { $or: [{ userId: delUserObjId }, { userId: delUserObjId.toString() }] };
                 
-                // Try to find the product to get its details, support both ObjectId and string IDs
-                let product = null;
-                if (mongoose.Types.ObjectId.isValid(productId)) {
-                    product = await Product.findById(productId);
-                }
-                
-                if (!product) {
-                    product = await Product.findOne({ _id: productId });
-                }
-
-                if (product) {
-                    library.items.push({
-                        productId: product._id,
-                        title: product.title,
-                        type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
-                        thumbnail: product.thumbnail,
-                        filePath: product.filePath,
-                        accessStatus: 'hidden',
-                        purchasedAt: new Date()
-                    });
-                } else {
-                    return res.status(404).json({ message: 'Product not found' });
-                }
-            }
-
-            await library.save();
-            console.log('Admin library saved with hidden item');
-            return res.json({ message: 'Item hidden from admin library', library });
-        } else {
-            // Normal user logic: standard $pull
-            if (!mongoose.Types.ObjectId.isValid(productId)) {
-                return res.status(400).json({ message: 'Invalid Product ID format' });
-            }
-
-            const delUserObjId = getUserObjId(user);
-            const updatedLib = await DigitalLibrary.findOneAndUpdate(
-                { $or: [{ userId: delUserObjId }, { userId: delUserObjId.toString() }] },
-                { $pull: { items: { productId: new mongoose.Types.ObjectId(productId) } } },
-                { new: true }
-            );
-
-            if (!updatedLib) {
-                return res.status(404).json({ message: 'Library not found' });
-            }
-            return res.json({ message: 'Item removed from library', library: updatedLib });
+        const pulls = [productId];
+        if (mongoose.Types.ObjectId.isValid(productId)) {
+            pulls.push(new mongoose.Types.ObjectId(productId));
         }
+
+        const updatedLib = await DigitalLibrary.findOneAndUpdate(
+            queryMatch,
+            { $pull: { items: { productId: { $in: pulls } } } },
+            { new: true }
+        );
+
+        if (!updatedLib) {
+            return res.status(404).json({ message: 'Library not found' });
+        }
+        return res.json({ message: 'Item permanently removed from library', library: updatedLib });
+
     } catch (error) {
         console.error('ERROR in DELETE /my-library:', error);
-        res.status(500).json({
-            message: 'Error removing from library',
-            error: error.message,
-            stack: error.stack
-        });
+        res.status(500).json({ message: 'Error removing from library', error: error.message });
     }
 });
 

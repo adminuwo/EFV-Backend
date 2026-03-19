@@ -137,6 +137,14 @@ global.demoProducts = [
     }
 ];
 
+// Health check routes
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is healthy', timestamp: new Date() });
+});
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'API is healthy', timestamp: new Date() });
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
@@ -189,5 +197,8 @@ const server = app.listen(PORT, () => {
     console.log(`📁 Serving frontend from: ${frontendPath}`);
 });
 
-// Increase timeout for long requests
-server.timeout = 30000;
+// INCREASE TIMEOUT for huge Audiobook Uploads!
+// 30 mins = 1800000 ms (Defaults are usually fine, but big files need bigger limits)
+server.timeout = 1800000;
+server.keepAliveTimeout = 1800000;
+server.headersTimeout = 1801000;

@@ -6,56 +6,53 @@ const fs = require('fs');
 const adminAuth = require('../middleware/adminAuth');
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ☁️ SMART STORAGE: GOOGLE CLOUD STORAGE (NATIVE)
-// Supports both Local (for dev) and GCS (for live) via Google Cloud Native SDK
+// ☁️ SMART STORAGE: GOOGLE CLOUD STORAGE
+// Native fallback: Uploads to local disk first, then pushes to GCS cleanly
 // ─────────────────────────────────────────────────────────────────────────────
 const hasGCS = process.env.GCS_BUCKET_NAME && process.env.GCS_BUCKET_NAME !== 'efv-assets-bucket';
-let upload;
 let useGCS = false;
 let storageClient;
 
 if (hasGCS) {
-    console.log('☁️ [Upload] Using NATIVE GOOGLE CLOUD STORAGE (Bucket Mode)');
+    console.log('☁️ [Upload] Using NATIVE GOOGLE CLOUD STORAGE (Disk -> Bucket Mode)');
     useGCS = true;
-    
-    // Use the native SDK which fully supports CLI Application Default Credentials!
     const { Storage } = require('@google-cloud/storage');
     storageClient = new Storage({
-        projectId: process.env.GCS_PROJECT_ID || 'ornate-charter-490605'
+        projectId: process.env.GCS_PROJECT_ID || 'efvframework'
     });
-
-    // When using GCS Native, we keep files in memory temporarily
-    upload = multer({
-        storage: multer.memoryStorage(),
-        limits: { fileSize: 500 * 1024 * 1024 }
-    });
-
 } else {
-    // 📁 LOCAL FALLBACK
     console.log('📁 [Upload] Using LOCAL DISK storage (Fallback Mode)');
-    const diskStorage = multer.diskStorage({
-        destination: function (req, file, cb) {
-            const rootDir = path.join(__dirname, '../../');
-            let dest = path.join(rootDir, 'src/uploads/audios');
-            if (file.fieldname === 'cover') dest = path.join(rootDir, 'src/uploads/covers');
-            else if (file.fieldname === 'ebook') dest = path.join(rootDir, 'src/uploads/ebooks');
-            else if (file.fieldname === 'gallery') dest = path.join(rootDir, 'src/uploads/gallery');
-
-            if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-            cb(null, dest);
-        },
-        filename: function (req, file, cb) {
-            const safeName = file.originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            cb(null, file.fieldname + '-' + uniqueSuffix + '-' + safeName);
-        }
-    });
-
-    upload = multer({ storage: diskStorage, limits: { fileSize: 500 * 1024 * 1024 } });
 }
 
-// Helper to manually upload buffer to GCS
-const uploadBufferToGCS = async (fileBuffer, originalname, fieldname) => {
+// ALWAYs save to disk first (prevents RAM crashes on large files)
+const diskStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const rootDir = path.join(__dirname, '../../');
+        let dest = path.join(rootDir, 'src/uploads/audios');
+        if (file.fieldname === 'cover') dest = path.join(rootDir, 'src/uploads/covers');
+        else if (file.fieldname === 'ebook') dest = path.join(rootDir, 'src/uploads/ebooks');
+        else if (file.fieldname === 'gallery') dest = path.join(rootDir, 'src/uploads/gallery');
+
+        try {
+            if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+        } catch (e) {
+            // Ignore if it already exists due to parallel form field parsing race conditions
+            if (e.code !== 'EEXIST') console.error("Error creating directory:", e);
+        }
+        
+        cb(null, dest);
+    },
+    filename: function (req, file, cb) {
+        const safeName = file.originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + '-' + safeName);
+    }
+});
+
+const upload = multer({ storage: diskStorage, limits: { fileSize: 1000 * 1024 * 1024 } }); // 1GB limit
+
+// Helper to manually upload local file to GCS
+const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
     const bucket = storageClient.bucket(process.env.GCS_BUCKET_NAME);
     const safeName = originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -65,16 +62,16 @@ const uploadBufferToGCS = async (fileBuffer, originalname, fieldname) => {
                    fieldname === 'gallery' ? 'gallery' : 'audios';
                    
     const gcsFileName = `${folder}/${fieldname}-${uniqueSuffix}-${safeName}`;
-    const file = bucket.file(gcsFileName);
 
     let contentType = 'application/octet-stream';
     if (fieldname === 'ebook') contentType = 'application/pdf';
     else if (fieldname.includes('audio') || fieldname.includes('chapter')) contentType = 'audio/mpeg';
     else if (fieldname === 'cover' || fieldname === 'gallery') contentType = 'image/jpeg';
 
-    await file.save(fileBuffer, {
+    await bucket.upload(localFilePath, {
+        destination: gcsFileName,
         metadata: { contentType: contentType },
-        resumable: false
+        resumable: true // helps with large files like audiobooks
     });
 
     return `https://storage.googleapis.com/${process.env.GCS_BUCKET_NAME}/${gcsFileName}`;
@@ -82,8 +79,8 @@ const uploadBufferToGCS = async (fileBuffer, originalname, fieldname) => {
 
 // Upload route
 router.post('/', adminAuth, (req, res, next) => {
-    res.setHeader('X-Upload-Version', '2.3'); // Version bumped for GCS Native
-    console.log(`🚀 [v2.3] Upload Request Started (Mode: ${useGCS ? 'GCS Native ☁️' : 'Local 📁'})`);
+    res.setHeader('X-Upload-Version', '2.4'); // Version bumped for GCS Native Disk mode
+    console.log(`🚀 [v2.4] Upload Request Started (Mode: ${useGCS ? 'GCS Native ☁️' : 'Local 📁'})`);
 
     upload.any()(req, res, (err) => {
         if (err) {
@@ -100,20 +97,33 @@ router.post('/', adminAuth, (req, res, next) => {
 
         for (const file of files) {
             let storagePath = '';
+            const localName = file.filename;
             
+            // Build local path string first
+            let localRelativePath = '';
+            if (file.fieldname === 'cover') localRelativePath = `uploads/covers/${localName}`;
+            else if (file.fieldname === 'ebook') localRelativePath = `uploads/ebooks/${localName}`;
+            else if (file.fieldname === 'audio') localRelativePath = `uploads/audios/${localName}`;
+            else if (file.fieldname === 'gallery') localRelativePath = `uploads/gallery/${localName}`;
+            else if (file.fieldname.startsWith('chapter_')) localRelativePath = `uploads/audios/${localName}`;
+
             if (useGCS) {
-                // Manually upload the memory buffer to GCS
-                console.log(`  - Uploading to GCS: ${file.fieldname} (${file.originalname})`);
-                storagePath = await uploadBufferToGCS(file.buffer, file.originalname, file.fieldname);
+                // Upload this disk file to GCS
+                console.log(`  - Uploading Disk -> GCS: ${file.fieldname} (${file.originalname})`);
+                try {
+                    storagePath = await uploadFileToGCS(file.path, file.originalname, file.fieldname);
+                    console.log(`  ✔ GCS Upload Success: ${storagePath}`);
+                    
+                    // Optional: Delete local file after successful cloud upload to save space
+                    // if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                } catch (gcsError) {
+                    console.error(`  ❌ GCS Upload Failed for ${file.originalname}:`, gcsError.message);
+                    console.log('  ⚠️ Falling back to local file for this item.');
+                    storagePath = localRelativePath;
+                }
             } else {
-                // Local disk uses the saved filename
-                const localName = file.filename;
-                console.log(`  - Saved Local: ${file.fieldname} -> ${localName}`);
-                if (file.fieldname === 'cover') storagePath = `uploads/covers/${localName}`;
-                else if (file.fieldname === 'ebook') storagePath = `uploads/ebooks/${localName}`;
-                else if (file.fieldname === 'audio') storagePath = `uploads/audios/${localName}`;
-                else if (file.fieldname === 'gallery') storagePath = `uploads/gallery/${localName}`;
-                else if (file.fieldname.startsWith('chapter_')) storagePath = `uploads/audios/${localName}`;
+                console.log(`  - Saved Local Only: ${file.fieldname} -> ${localName}`);
+                storagePath = localRelativePath;
             }
 
             if (file.fieldname === 'cover') responseIds.coverPath = storagePath;
@@ -132,13 +142,13 @@ router.post('/', adminAuth, (req, res, next) => {
 
         console.log('✅ All files processed successfully!');
         res.json({
-            message: 'Files uploaded successfully to ' + (useGCS ? 'Google Cloud' : 'Local'),
+            message: 'Files uploaded successfully',
             paths: responseIds,
             mode: useGCS ? 'gcs' : 'local'
         });
     } catch (error) {
         console.error('❌ Processing error:', error);
-        res.status(500).json({ message: 'File processing failed' });
+        res.status(500).json({ message: 'File processing failed', error: error.message });
     }
 });
 
