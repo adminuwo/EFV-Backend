@@ -151,7 +151,8 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/products', require('./routes/products'));
+const productRoutes = require('./routes/products');
+app.use('/api/products', productRoutes);
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/library', require('./routes/library'));
@@ -170,6 +171,13 @@ app.use('/api/shipments', require('./routes/shipments'));
 app.use('/api/nimbus', nimbusShipping);
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/images', require('./routes/images'));
+
+// Initial Seed (if DB empty)
+setTimeout(() => {
+    if (typeof productRoutes.seedProducts === 'function') {
+        productRoutes.seedProducts();
+    }
+}, 5000);
 
 // Dynamic Frontend Configuration
 // Serving /js/api-config.js dynamically to inject BACKEND_URL from environment variables

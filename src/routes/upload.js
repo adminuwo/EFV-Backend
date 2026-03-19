@@ -83,15 +83,12 @@ const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
     });
 
     // For cover/gallery: return a BACKEND PROXY URL so the private bucket is not directly exposed.
-    // The /api/images/cover/* route will stream the image from GCS through the backend.
-    if (fieldname === 'cover' && process.env.GCS_COVER_BUCKET_NAME) {
-        // Store path without leading 'covers/' since our proxy route adds context
-        const proxyPath = gcsFileName; // e.g. covers/cover-xxx-name.jpg
-        return `/api/images/cover/${proxyPath}`;
+    // The /api/images/cover/* or /api/images/gallery/* route will stream the image from GCS through the backend.
+    if (fieldname === 'cover') {
+        return `/api/images/cover/${gcsFileName}`;
     }
     if (fieldname === 'gallery') {
-        const objectName = gcsFileName.replace('gallery/', '');
-        return `/api/images/gallery/${objectName}`;
+        return `/api/images/gallery/${gcsFileName}`;
     }
 
     // For ebooks/audiobooks: use direct GCS URL (accessed through secure content API anyway)
