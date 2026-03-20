@@ -74,13 +74,19 @@ if (envFrontendUrl) {
 }
 
 // Add common domain variants if needed
-const commonDomain = process.env.EXTERNAL_DOMAIN; // e.g. efvframework.com
+const commonDomain = process.env.EXTERNAL_DOMAIN || 'efvframework.com'; // Default to live domain
 if (commonDomain) {
-    allowedOrigins.push(`https://${commonDomain}`);
-    allowedOrigins.push(`https://www.${commonDomain}`);
+    const domains = commonDomain.split(',').map(d => d.trim());
+    domains.forEach(d => {
+        if (!allowedOrigins.includes(`https://${d}`)) allowedOrigins.push(`https://${d}`);
+        if (!allowedOrigins.includes(`https://www.${d}`)) allowedOrigins.push(`https://www.${d}`);
+    });
 }
 
 app.use((req, res, next) => {
+    // Support Google Login popups by allowing cross-origin-opener-policy
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    
     const logStr = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin} - Referer: ${req.headers.referer} - Auth: ${req.headers.authorization ? 'Present' : 'Missing'}\n`;
     console.log(logStr);
     try {
