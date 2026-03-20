@@ -84,7 +84,7 @@ const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
 
     let contentType = 'application/octet-stream';
     if (fieldname === 'ebook') contentType = 'application/pdf';
-    else if (fieldname.includes('audio') || fieldname.includes('chapter')) contentType = 'audio/mpeg';
+    else if (fieldname === 'audio' || fieldname.startsWith('chapter_')) contentType = 'audio/mpeg';
     else if (fieldname === 'cover' || fieldname === 'gallery') contentType = 'image/jpeg';
 
     await bucket.upload(localFilePath, {

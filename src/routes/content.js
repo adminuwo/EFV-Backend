@@ -133,14 +133,46 @@ async function findProductById(id) {
     return isObjectId ? await Product.findById(id) : await Product.findOne({ legacyId: id });
 }
 
+// 🔍 DEBUG endpoint - admin only: check what's stored in DB for a product
+router.get('/debug/:productId', protect, async (req, res) => {
+    try {
+        if (!req.user || (req.user.role !== 'admin' && req.user.email !== 'admin@uwo24.com')) {
+            return res.status(403).json({ message: 'Admin only' });
+        }
+        const product = await findProductById(req.params.productId);
+        if (!product) return res.status(404).json({ message: 'Product not found in DB', id: req.params.productId });
+        return res.json({
+            _id: product._id,
+            title: product.title,
+            type: product.type,
+            filePath: product.filePath || null,
+            hasFilePath: !!product.filePath,
+            thumbnail: product.thumbnail || null,
+            chaptersCount: (product.chapters || []).length,
+            chaptersWithFile: (product.chapters || []).filter(c => c.filePath).length,
+            hasGCS: hasGCS,
+            GCS_BUCKET: process.env.GCS_BUCKET_NAME || 'NOT SET'
+        });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
 // 📖 Secure E-Book Endpoint
 router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
     try {
         const product = await findProductById(req.params.productId);
-        if (!product || !product.filePath) {
-            console.error(`❌ E-Book not found in DB for ID: ${req.params.productId}`);
-            return res.status(404).json({ message: 'E-Book not found' });
+        if (!product) {
+            console.error(`❌ [EBOOK] Product NOT found in DB for ID: ${req.params.productId}`);
+            return res.status(404).json({ message: 'E-Book product not found in database' });
         }
+        if (!product.filePath) {
+            console.error(`❌ [EBOOK] Product found but filePath is EMPTY for: ${product.title} (${req.params.productId})`);
+            return res.status(404).json({ message: 'E-Book file has not been uploaded yet. Please re-upload the PDF from the admin panel.' });
+        }
+        console.log(`📖 [EBOOK] Product: ${product.title} | filePath: ${product.filePath}`);
+        console.log(`📖 [EBOOK] hasGCS: ${hasGCS} | filePath starts with http: ${product.filePath.startsWith('http')}`);
+    
 
         const bucketName = process.env.GCS_BUCKET_NAME;
 
@@ -208,7 +240,14 @@ router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
 router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
     try {
         const product = await findProductById(req.params.productId);
-        if (!product || !product.filePath) return res.status(404).json({ message: 'Audiobook not found' });
+        if (!product) {
+            console.error(`❌ [AUDIO] Product NOT found in DB for ID: ${req.params.productId}`);
+            return res.status(404).json({ message: 'Audiobook product not found in database' });
+        }
+        if (!product.filePath) {
+            console.error(`❌ [AUDIO] Product found but filePath is EMPTY for: ${product.title} (${req.params.productId})`);
+            return res.status(404).json({ message: 'Audio file has not been uploaded yet. Please re-upload from the admin panel.' });
+        }
 
         const bucketName = process.env.GCS_BUCKET_NAME;
 
@@ -272,7 +311,17 @@ router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async
 
         const sortedChapters = [...product.chapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
         const chapter = sortedChapters[idx];
-        if (!chapter || !chapter.filePath) return res.status(404).json({ message: 'Chapter file path not found' });
+        if (!chapter) {
+            console.error(`❌ [CHAPTER] Chapter index ${idx} not found for product: ${product.title}`);
+            return res.status(404).json({ message: `Chapter ${idx + 1} not found` });
+        }
+        if (!chapter.filePath) {
+            console.error(`❌ [CHAPTER] Chapter ${idx} exists but filePath is EMPTY for: ${product.title}`);
+            return res.status(404).json({ message: `Chapter ${idx + 1} audio file has not been uploaded yet.` });
+        }
+        console.log(`🎵 [CHAPTER] Product: ${product.title} | Chapter: ${idx} | filePath: ${chapter.filePath}`);
+        console.log(`🎵 [CHAPTER] hasGCS: ${hasGCS} | filePath starts with http: ${chapter.filePath.startsWith('http')}`);
+    
 
         const bucketName = process.env.GCS_BUCKET_NAME;
 

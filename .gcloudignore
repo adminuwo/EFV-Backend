@@ -6,5 +6,15 @@ Dockerfile
 .dockerignore
 npm-debug.log
 src/data/auth_debug.log
-# Don't upload local data if using JSON DB (GCP should start fresh or use external DB)
-# src/data/*.json
+
+# Custom EFV files to ignore so deployment doesn't crash (Errno 28)
+src/data/*.json
+*.json
+!package*.json
+!coupons_current.json
+!partners_current.json
+src/uploads/
+logs.json
+errors.json
+*.log
+*.txt
