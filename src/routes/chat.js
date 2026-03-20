@@ -10,7 +10,7 @@ router.post('/message', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        // --- RAG: Knowledge Retrieval (LOCAL with Cache) ---
+        // --- RAG: Knowledge Retrieval (Robust Engine) ---
         let ragContext = "";
         if (!global.ragCache) global.ragCache = { text: "", lastSync: 0 };
         
@@ -22,85 +22,98 @@ router.post('/message', async (req, res) => {
             const ragDir = path.join(__dirname, '..', 'uploads', 'rag');
             const now = Date.now();
 
-            // Refresh cache if older than 5 minutes or empty
-            if (now - global.ragCache.lastSync > 300000 || !global.ragCache.text) {
+            // Force refresh if cache is empty or older than 10 mins
+            if (now - global.ragCache.lastSync > 600000 || !global.ragCache.text) {
                 let combinedText = "";
                 let fileCount = 0;
 
-                // 1️⃣ Try Local Files
-                try {
-                    if (fs.existsSync(ragDir)) {
-                        const files = fs.readdirSync(ragDir);
-                        for (const fileName of files) {
+                // 1️⃣ Local Directory Check
+                if (fs.existsSync(ragDir)) {
+                    const files = fs.readdirSync(ragDir);
+                    for (const fileName of files) {
+                        try {
                             const filePath = path.join(ragDir, fileName);
                             const buffer = fs.readFileSync(filePath);
+                            let extracted = "";
                             if (fileName.endsWith('.pdf')) {
-                                try {
-                                    const data = await pdf(buffer);
-                                    combinedText += `--- DOC (Local): ${fileName} ---\n${data.text}\n\n`;
-                                    fileCount++;
-                                } catch (e) { console.error(`❌ PDF Error (${fileName}):`, e.message); }
+                                const data = await pdf(buffer);
+                                extracted = data.text;
                             } else if (fileName.endsWith('.txt')) {
-                                combinedText += `--- DOC (Local): ${fileName} ---\n${buffer.toString()}\n\n`;
+                                extracted = buffer.toString();
+                            }
+                            if (extracted) {
+                                combinedText += `\n[SOURCE: ${fileName}]\n${extracted}\n`;
                                 fileCount++;
                             }
-                        }
+                        } catch (e) { console.error(`❌ Error reading ${fileName}:`, e.message); }
                     }
-                } catch (err) { console.error('❌ Local RAG Load Error:', err.message); }
+                }
 
-                // 2️⃣ Try Cloud Files
+                // 2️⃣ Cloud Bucket Check (Master Sync)
                 const { Storage } = require('@google-cloud/storage');
                 const gcsBucketName = process.env.GCS_RAG_BUCKET_NAME || 'efvrag';
                 try {
                     const storage = new Storage();
                     const [gcsFiles] = await storage.bucket(gcsBucketName).getFiles();
                     for (const file of gcsFiles) {
-                        if (fs.existsSync(path.join(ragDir, file.name))) continue; // Skip sync duplicates
-
-                        const [buffer] = await file.download();
-                        if (file.name.endsWith('.pdf')) {
-                            try {
+                        // Only download if NOT present locally to save time/bandwidth
+                        if (!fs.existsSync(path.join(ragDir, file.name))) {
+                            console.log(`🌩️ Syncing new doc from cloud: ${file.name}`);
+                            const [buffer] = await file.download();
+                            let cloudExtracted = "";
+                            if (file.name.endsWith('.pdf')) {
                                 const data = await pdf(buffer);
-                                combinedText += `--- DOC (Cloud): ${file.name} ---\n${data.text}\n\n`;
-                                fileCount++;
-                            } catch (e) { console.error(`❌ Cloud PDF Error (${file.name}):`, e.message); }
-                        } else if (file.name.endsWith('.txt')) {
-                            combinedText += `--- DOC (Cloud): ${file.name} ---\n${buffer.toString()}\n\n`;
+                                cloudExtracted = data.text;
+                            } else {
+                                cloudExtracted = buffer.toString();
+                            }
+                            combinedText += `\n[SOURCE: ${file.name}]\n${cloudExtracted}\n`;
                             fileCount++;
                         }
                     }
-                } catch (cloudErr) {
-                    console.warn('⚠️ Cloud GCS Sync skipped or failed:', cloudErr.message);
-                }
+                } catch (cloudErr) { console.warn('⚠️ Cloud RAG Sync failed:', cloudErr.message); }
 
                 if (combinedText) {
                     global.ragCache.text = combinedText;
                     global.ragCache.lastSync = now;
-                    console.log(`🧠 RAG CACHE UPDATED: Loaded ${fileCount} files, Total chars: ${combinedText.length}`);
-                } else {
-                    console.warn('⚠️ RAG CACHE EMPTY: No readable documents found locally or in cloud.');
+                    console.log(`🧠 RAG REFRESHED: Loaded ${fileCount} files (${Math.round(combinedText.length/1024)} KB)`);
                 }
             }
 
+            // --- SMART SEARCH LOGIC ---
             if (global.ragCache.text) {
-                const query = message.toLowerCase();
-                // Include shorter keywords like 'AI' (min 2 chars)
-                const keywords = query.split(/[^a-z0-9]/).filter(word => word.length >= 2);
+                const queryWords = message.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+                const chunks = global.ragCache.text.split(/\[SOURCE: /);
                 
-                // Break into chunks of ~500 chars for finer search
-                const chunks = global.ragCache.text.split(/\n\n+|--- DOC:/);
-                const snippets = chunks.filter(chunk => 
-                    keywords.some(kw => chunk.toLowerCase().includes(kw))
-                ).slice(0, 8); // Take top 8 snippets
+                let bestSnippets = [];
+                for (const chunk of chunks) {
+                    if (!chunk.trim()) continue;
+                    
+                    // Simple relevance score based on keyword frequency
+                    let score = 0;
+                    queryWords.forEach(word => {
+                        const regex = new RegExp(word, 'gi');
+                        const count = (chunk.match(regex) || []).length;
+                        score += count;
+                    });
 
-                if (snippets.length > 0) {
-                    console.log(`✅ RAG Match: Found ${snippets.length} relevant snippets.`);
-                    ragContext = "\n\nKNOWLEDGE BASE CONTEXT:\n" + snippets.join("\n---\n") + "\n\n";
+                    if (score > 0) {
+                        bestSnippets.push({ text: chunk.substring(0, 2000), score }); // Limit chunk size
+                    }
+                }
+
+                // Sort by score and take best 5
+                bestSnippets.sort((a, b) => b.score - a.score);
+                const topSnippets = bestSnippets.slice(0, 5).map(s => s.text);
+
+                if (topSnippets.length > 0) {
+                    console.log(`✅ RAG SUCCESS: Found matches in ${topSnippets.length} doc sections.`);
+                    ragContext = topSnippets.join("\n---\n");
+                } else {
+                    console.log(`ℹ️ RAG: No direct matches found for "${message}"`);
                 }
             }
-        } catch (ragError) {
-            console.warn('⚠️ Local RAG Retrieval failed:', ragError.message);
-        }
+        } catch (ragError) { console.error('🔴 RAG Fatal Error:', ragError); }
 
         let text = '';
         let isDemoResponse = false;

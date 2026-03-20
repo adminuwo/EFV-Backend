@@ -139,73 +139,101 @@ router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
         const product = await findProductById(req.params.productId);
         if (!product || !product.filePath) return res.status(404).json({ message: 'E-Book not found' });
 
+        // Force fallback if GCS is down or credentials missing
         if (product.filePath.startsWith('http') && hasGCS) {
-            const relPath = getGcsRelativePath(product.filePath);
-            if (relPath) {
-                // Generate a signed URL valid for 1 hour
-                const options = {
-                    version: 'v4',
-                    action: 'read',
-                    expires: Date.now() + 60 * 60 * 1000, // 1 hour
-                };
-                
-                const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
-                return res.redirect(url); // Redirect the client to the signed URL
+            try {
+                const relPath = getGcsRelativePath(product.filePath);
+                if (relPath) {
+                    const options = { version: 'v4', action: 'read', expires: Date.now() + 15 * 60 * 1000 };
+                    const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                    return res.redirect(url);
+                }
+            } catch (err) {
+                console.warn('⚠️ GCS Redirect failed, checking local fallback...');
             }
         }
 
-        const fullPath = path.resolve(__dirname, '../', product.filePath.startsWith('ebooks/') ? 'uploads/' + product.filePath : product.filePath);
+        // --- LOCAL FALLBACK ---
+        // Cleanup path: remove leading / or uploads/ if present since we're using path.resolve
+        let cleanPath = product.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, ''); // strip GCS domain
+        cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+        
+        let fullPath = path.resolve(__dirname, '../../', cleanPath);
+        if (!fs.existsSync(fullPath)) {
+             // Try prefixing with uploads/ if missing
+             fullPath = path.resolve(__dirname, '../../uploads/', cleanPath);
+        }
+
+        console.log(`🔌 Streaming Ebook: ${fullPath}`);
         streamLocalFile(fullPath, req, res);
     } catch (error) {
-        console.error('EBOOK signed URL error:', error);
+        console.error('EBOOK stream error:', error);
         res.status(500).json({ message: error.message });
     }
 });
 
-// 🎧 Secure Audiobook Endpoint
+// 🎧 Secure Audiobook Endpoint (Single File)
 router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
     try {
         const product = await findProductById(req.params.productId);
         if (!product || !product.filePath) return res.status(404).json({ message: 'Audiobook not found' });
 
         if (product.filePath.startsWith('http') && hasGCS) {
-            const relPath = getGcsRelativePath(product.filePath);
-            if (relPath) {
-                const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
-                const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
-                return res.redirect(url);
+            try {
+                const relPath = getGcsRelativePath(product.filePath);
+                if (relPath) {
+                    const options = { version: 'v4', action: 'read', expires: Date.now() + 15 * 60 * 1000 };
+                    const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                    return res.redirect(url);
+                }
+            } catch (err) {
+                console.warn('⚠️ GCS Audio Redirect failed, checking local...');
             }
         }
 
-        const fullPath = path.resolve(__dirname, '../', product.filePath.startsWith('audios/') ? 'uploads/' + product.filePath : product.filePath);
+        const cleanPath = product.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
+        let fullPath = path.resolve(__dirname, '../../', cleanPath);
+        if (!fs.existsSync(fullPath)) fullPath = path.resolve(__dirname, '../../uploads/', cleanPath);
+
         streamLocalFile(fullPath, req, res);
     } catch (error) {
-        console.error('AUDIO signed URL error:', error);
+        console.error('AUDIO stream error:', error);
         res.status(500).json({ message: 'Audio stream error' });
     }
 });
 
-// 🎵 Chapter Endpoint
+// 🎵 Chapter Endpoint (Multi-file Audiobooks)
 router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async (req, res) => {
     try {
         const product = await findProductById(req.params.productId);
         const idx = parseInt(req.params.chapterIndex);
-        const chapter = (product?.chapters || []).sort((a, b) => a.chapterNumber - b.chapterNumber)[idx];
-        if (!chapter?.filePath) return res.status(404).json({ message: 'Chapter not found' });
+        if (!product || !product.chapters) return res.status(404).json({ message: 'Product or chapters not found' });
+
+        const chapter = [...product.chapters].sort((a, b) => a.chapterNumber - b.chapterNumber)[idx];
+        if (!chapter || !chapter.filePath) return res.status(404).json({ message: 'Chapter file path not found' });
 
         if (chapter.filePath.startsWith('http') && hasGCS) {
-            const relPath = getGcsRelativePath(chapter.filePath);
-            if (relPath) {
-                const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
-                const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
-                return res.redirect(url);
+            try {
+                const relPath = getGcsRelativePath(chapter.filePath);
+                if (relPath) {
+                    const options = { version: 'v4', action: 'read', expires: Date.now() + 15 * 60 * 1000 };
+                    const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                    return res.redirect(url);
+                }
+            } catch (err) {
+                console.warn(`⚠️ Chapter GCS fail (Ch ${idx}), checking local...`);
             }
         }
 
-        const fullPath = path.resolve(__dirname, '../', chapter.filePath.startsWith('audios/') ? 'uploads/' + chapter.filePath : chapter.filePath);
+        // Local Fallback for Chapter
+        const cleanPath = chapter.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
+        let fullPath = path.resolve(__dirname, '../../', cleanPath);
+        if (!fs.existsSync(fullPath)) fullPath = path.resolve(__dirname, '../../uploads/', cleanPath);
+
+        console.log(`🎵 Streaming Chapter ${idx}: ${fullPath}`);
         streamLocalFile(fullPath, req, res);
     } catch (error) {
-        console.error('CHAPTER signed URL error:', error);
+        console.error('CHAPTER stream error:', error);
         res.status(500).json({ message: 'Chapter stream error' });
     }
 });
