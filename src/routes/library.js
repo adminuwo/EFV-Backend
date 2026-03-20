@@ -43,7 +43,10 @@ router.get('/my-library', protect, async (req, res) => {
                 }
 
                 if (!product && productId) {
-                    product = await Product.findOne({ _id: productId });
+                   // Try searching by legacyId if not a valid ObjectId or not found
+                   product = await Product.findOne({
+                       $or: [{ _id: productId }, { legacyId: productId }]
+                   });
                 }
 
                 // Fallback: Fuzzy matching by title

@@ -137,35 +137,67 @@ async function findProductById(id) {
 router.get('/ebook/:productId', protect, validatePurchase, async (req, res) => {
     try {
         const product = await findProductById(req.params.productId);
-        if (!product || !product.filePath) return res.status(404).json({ message: 'E-Book not found' });
+        if (!product || !product.filePath) {
+            console.error(`❌ E-Book not found in DB for ID: ${req.params.productId}`);
+            return res.status(404).json({ message: 'E-Book not found' });
+        }
 
-        // Force fallback if GCS is down or credentials missing
+        const bucketName = process.env.GCS_BUCKET_NAME;
+
+        // --- GCS HANDLING ---
         if (product.filePath.startsWith('http') && hasGCS) {
             try {
                 const relPath = getGcsRelativePath(product.filePath);
                 if (relPath) {
-                    const options = { version: 'v4', action: 'read', expires: Date.now() + 15 * 60 * 1000 };
-                    const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
-                    return res.redirect(url);
+                    console.log(`☁️ Proxying GCS E-Book Stream for: ${relPath}`);
+                    // Force proxy for Ebooks. pdf.js relies on fetch and custom headers (Authorization/Range), 
+                    // which fail CORS checks if redirected directly to GCS. Proxying safely streams it.
+                    return await streamFromGCS(relPath, req, res);
                 }
             } catch (err) {
-                console.warn('⚠️ GCS Redirect failed, checking local fallback...');
+                console.warn(`⚠️ GCS Ebook Proxy fail: ${err.message}.`);
+                return res.status(500).json({ message: 'Cloud stream failed.' });
             }
         }
 
         // --- LOCAL FALLBACK ---
-        // Cleanup path: remove leading / or uploads/ if present since we're using path.resolve
-        let cleanPath = product.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, ''); // strip GCS domain
-        cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+        // Strip domain and leading slash
+        let cleanPath = product.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
         
-        let fullPath = path.resolve(__dirname, '../../', cleanPath);
-        if (!fs.existsSync(fullPath)) {
-             // Try prefixing with uploads/ if missing
-             fullPath = path.resolve(__dirname, '../../uploads/', cleanPath);
+        // Remove 'uploads/' prefix if we're going to use it for matching
+        const relativeToUploads = cleanPath.replace(/^src\/uploads\//, '').replace(/^uploads\//, '');
+
+        // Potential paths to check
+        const searchPaths = [
+            path.resolve(__dirname, '../../', cleanPath),                     // As stored (relative to project root/src)
+            path.resolve(__dirname, '../../src/uploads/', relativeToUploads),  // Native project source structure
+            path.resolve(__dirname, '../../uploads/', relativeToUploads),      // Root uploads structure
+            path.resolve(__dirname, '../../src/', cleanPath),                  // Direct src relative
+        ];
+
+        let finalPath = null;
+        for (const p of searchPaths) {
+            if (fs.existsSync(p) && !fs.lstatSync(p).isDirectory()) {
+                finalPath = p;
+                break;
+            }
         }
 
-        console.log(`🔌 Streaming Ebook: ${fullPath}`);
-        streamLocalFile(fullPath, req, res);
+        // Add PWD fallback if everything else fails
+        if (!finalPath) {
+            const pwdPath1 = path.join(process.cwd(), cleanPath);
+            const pwdPath2 = path.join(process.cwd(), 'src', cleanPath);
+            if (fs.existsSync(pwdPath1) && !fs.lstatSync(pwdPath1).isDirectory()) finalPath = pwdPath1;
+            else if (fs.existsSync(pwdPath2) && !fs.lstatSync(pwdPath2).isDirectory()) finalPath = pwdPath2;
+        }
+
+        if (!finalPath) {
+            console.error(`❌ Local File Exhaustion: Could not find ${cleanPath} in any search path.`);
+            return res.status(404).json({ message: 'Local eBook file not found on server.' });
+        }
+
+        console.log(`🔌 Streaming Ebook: ${finalPath}`);
+        streamLocalFile(finalPath, req, res);
     } catch (error) {
         console.error('EBOOK stream error:', error);
         res.status(500).json({ message: error.message });
@@ -178,27 +210,58 @@ router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
         const product = await findProductById(req.params.productId);
         if (!product || !product.filePath) return res.status(404).json({ message: 'Audiobook not found' });
 
+        const bucketName = process.env.GCS_BUCKET_NAME;
+
         if (product.filePath.startsWith('http') && hasGCS) {
             try {
                 const relPath = getGcsRelativePath(product.filePath);
                 if (relPath) {
-                    const options = { version: 'v4', action: 'read', expires: Date.now() + 15 * 60 * 1000 };
-                    const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                    const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
+                    const [url] = await storage.bucket(bucketName).file(relPath).getSignedUrl(options);
                     return res.redirect(url);
                 }
             } catch (err) {
-                console.warn('⚠️ GCS Audio Redirect failed, checking local...');
+                console.warn(`⚠️ GCS Audio fail: ${err.message}. Proxying...`);
+                const relPath = getGcsRelativePath(product.filePath);
+                if (relPath) return streamFromGCS(relPath, req, res);
             }
         }
 
-        const cleanPath = product.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
-        let fullPath = path.resolve(__dirname, '../../', cleanPath);
-        if (!fs.existsSync(fullPath)) fullPath = path.resolve(__dirname, '../../uploads/', cleanPath);
+        // --- LOCAL FALLBACK ---
+        // Strip domain and leading slash to get relative path
+        let cleanPath = product.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
+        
+        // Remove common prefixes to get a pure relative path for matching
+        const relativeToUploads = cleanPath.replace(/^src\/uploads\//, '').replace(/^uploads\//, '');
 
-        streamLocalFile(fullPath, req, res);
+        // Comprehensive search paths to handle various deployment environments
+        const searchPaths = [
+            path.resolve(__dirname, '../../', cleanPath),                     // Root relative (V1 style)
+            path.resolve(__dirname, '../../src/uploads/', relativeToUploads),  // src/uploads relative (V2 style)
+            path.resolve(__dirname, '../../uploads/', relativeToUploads),      // root/uploads relative
+            path.resolve(__dirname, '../../src/', cleanPath),                  // src relative
+            path.join(process.cwd(), cleanPath),                               // PWD relative
+            path.join(process.cwd(), 'src', cleanPath)                         // PWD/src relative
+        ];
+
+        let finalPath = null;
+        for (const p of searchPaths) {
+            if (fs.existsSync(p) && !fs.lstatSync(p).isDirectory()) {
+                finalPath = p;
+                break;
+            }
+        }
+
+        if (!finalPath) {
+            console.error(`❌ Audio File Not Found: Tried ${searchPaths.length} locations for ${cleanPath}`);
+            return res.status(404).json({ message: 'Local audio file not found on server.' });
+        }
+
+        console.log(`🔌 Streaming Audio: ${finalPath}`);
+        streamLocalFile(finalPath, req, res);
     } catch (error) {
         console.error('AUDIO stream error:', error);
-        res.status(500).json({ message: 'Audio stream error' });
+        res.status(500).json({ message: error.message });
     }
 });
 
@@ -209,32 +272,58 @@ router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async
         const idx = parseInt(req.params.chapterIndex);
         if (!product || !product.chapters) return res.status(404).json({ message: 'Product or chapters not found' });
 
-        const chapter = [...product.chapters].sort((a, b) => a.chapterNumber - b.chapterNumber)[idx];
+        const sortedChapters = [...product.chapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
+        const chapter = sortedChapters[idx];
         if (!chapter || !chapter.filePath) return res.status(404).json({ message: 'Chapter file path not found' });
+
+        const bucketName = process.env.GCS_BUCKET_NAME;
 
         if (chapter.filePath.startsWith('http') && hasGCS) {
             try {
                 const relPath = getGcsRelativePath(chapter.filePath);
                 if (relPath) {
-                    const options = { version: 'v4', action: 'read', expires: Date.now() + 15 * 60 * 1000 };
-                    const [url] = await storage.bucket(process.env.GCS_BUCKET_NAME).file(relPath).getSignedUrl(options);
+                    const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
+                    const [url] = await storage.bucket(bucketName).file(relPath).getSignedUrl(options);
                     return res.redirect(url);
                 }
             } catch (err) {
-                console.warn(`⚠️ Chapter GCS fail (Ch ${idx}), checking local...`);
+                console.warn(`⚠️ Chapter GCS fail: ${err.message}. Proxying...`);
+                const relPath = getGcsRelativePath(chapter.filePath);
+                if (relPath) return streamFromGCS(relPath, req, res);
             }
         }
 
-        // Local Fallback for Chapter
-        const cleanPath = chapter.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
-        let fullPath = path.resolve(__dirname, '../../', cleanPath);
-        if (!fs.existsSync(fullPath)) fullPath = path.resolve(__dirname, '../../uploads/', cleanPath);
+        // --- LOCAL FALLBACK ---
+        let cleanPath = chapter.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
+        const relativeToUploads = cleanPath.replace(/^src\/uploads\//, '').replace(/^uploads\//, '');
 
-        console.log(`🎵 Streaming Chapter ${idx}: ${fullPath}`);
-        streamLocalFile(fullPath, req, res);
+        const searchPaths = [
+            path.resolve(__dirname, '../../', cleanPath),
+            path.resolve(__dirname, '../../src/uploads/', relativeToUploads),
+            path.resolve(__dirname, '../../uploads/', relativeToUploads),
+            path.resolve(__dirname, '../../src/', cleanPath),
+            path.join(process.cwd(), cleanPath),
+            path.join(process.cwd(), 'src', cleanPath)
+        ];
+
+        let finalPath = null;
+        for (const p of searchPaths) {
+            if (fs.existsSync(p) && !fs.lstatSync(p).isDirectory()) {
+                finalPath = p;
+                break;
+            }
+        }
+
+        if (!finalPath) {
+            console.error(`❌ Chapter File Not Found: Tried ${searchPaths.length} locations for ${cleanPath}`);
+            return res.status(404).json({ message: 'Local chapter file not found on server.' });
+        }
+
+        console.log(`🎵 Streaming Chapter ${idx}: ${finalPath}`);
+        streamLocalFile(finalPath, req, res);
     } catch (error) {
         console.error('CHAPTER stream error:', error);
-        res.status(500).json({ message: 'Chapter stream error' });
+        res.status(500).json({ message: error.message });
     }
 });
 

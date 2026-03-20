@@ -97,8 +97,8 @@ const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
 
 // Upload route
 router.post('/', adminAuth, (req, res, next) => {
-    res.setHeader('X-Upload-Version', '2.4'); // Version bumped for GCS Native Disk mode
-    console.log(`🚀 [v2.4] Upload Request Started (Mode: ${useGCS ? 'GCS Native ☁️' : 'Local 📁'})`);
+    res.setHeader('X-Upload-Version', '2.5'); // Version bumped for GCS Native Disk mode
+    console.log(`🚀 [v2.5] Upload Request Started (Mode: ${useGCS ? 'GCS Native ☁️' : 'Local 📁'})`);
 
     upload.any()(req, res, (err) => {
         if (err) {
@@ -117,13 +117,13 @@ router.post('/', adminAuth, (req, res, next) => {
             let storagePath = '';
             const localName = file.filename;
             
-            // Build local path string first
+            // Build local path string first - using src/ prefix for unequivocal resolution
             let localRelativePath = '';
-            if (file.fieldname === 'cover') localRelativePath = `uploads/covers/${localName}`;
-            else if (file.fieldname === 'ebook') localRelativePath = `uploads/ebooks/${localName}`;
-            else if (file.fieldname === 'audio') localRelativePath = `uploads/audios/${localName}`;
-            else if (file.fieldname === 'gallery') localRelativePath = `uploads/gallery/${localName}`;
-            else if (file.fieldname.startsWith('chapter_')) localRelativePath = `uploads/audios/${localName}`;
+            if (file.fieldname === 'cover') localRelativePath = `src/uploads/covers/${localName}`;
+            else if (file.fieldname === 'ebook') localRelativePath = `src/uploads/ebooks/${localName}`;
+            else if (file.fieldname === 'audio') localRelativePath = `src/uploads/audios/${localName}`;
+            else if (file.fieldname === 'gallery') localRelativePath = `src/uploads/gallery/${localName}`;
+            else if (file.fieldname.startsWith('chapter_')) localRelativePath = `src/uploads/audios/${localName}`;
 
             if (useGCS) {
                 // Upload this disk file to GCS

@@ -221,21 +221,16 @@ router.put('/:id', adminAuth, async (req, res) => {
                 for (let lib of libraries) {
                     let changed = false;
                     let found = false;
-
-                    lib.items = lib.items.map(item => {
+                    for (let item of lib.items) {
                         if (item.productId && item.productId.toString() === product._id.toString()) {
                             changed = true;
                             found = true;
-                            return {
-                                ...item,
-                                title: product.title,
-                                thumbnail: product.thumbnail,
-                                filePath: product.filePath,
-                                type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book'
-                            };
+                            item.title = product.title;
+                            item.thumbnail = product.thumbnail;
+                            item.filePath = product.filePath;
+                            item.type = product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book';
                         }
-                        return item;
-                    });
+                    }
 
                     // ADMIN SPECIFIC: If this is the current admin's library OR the hardcoded admin's library, ADD IT IF MISSING
                     const isCurrentAdmin = lib.userId && lib.userId.toString() === req.user._id.toString();
