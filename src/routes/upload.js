@@ -27,16 +27,27 @@ if (hasGCS) {
 // ALWAYs save to disk first (prevents RAM crashes on large files)
 const diskStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const rootDir = path.join(__dirname, '../../');
-        let dest = path.join(rootDir, 'src/uploads/audios');
-        if (file.fieldname === 'cover') dest = path.join(rootDir, 'src/uploads/covers');
-        else if (file.fieldname === 'ebook') dest = path.join(rootDir, 'src/uploads/ebooks');
-        else if (file.fieldname === 'gallery') dest = path.join(rootDir, 'src/uploads/gallery');
+        // Detect if running in Google Cloud Run or a serverless environment
+        const isCloud = !!process.env.K_SERVICE || !!process.env.CLOUD_RUN_JOB;
+        
+        let dest;
+        if (isCloud) {
+            // Cloud Run provides a writable /tmp directory that uses memory.
+            // This is safer than writing to the /app directory which might be read-only.
+            dest = path.join('/tmp', 'efv_uploads', file.fieldname === 'cover' ? 'covers' : 
+                                                file.fieldname === 'ebook' ? 'ebooks' : 
+                                                file.fieldname === 'gallery' ? 'gallery' : 'audios');
+        } else {
+            const rootDir = path.join(__dirname, '../../');
+            dest = path.join(rootDir, 'src/uploads/audios');
+            if (file.fieldname === 'cover') dest = path.join(rootDir, 'src/uploads/covers');
+            else if (file.fieldname === 'ebook') dest = path.join(rootDir, 'src/uploads/ebooks');
+            else if (file.fieldname === 'gallery') dest = path.join(rootDir, 'src/uploads/gallery');
+        }
 
         try {
             if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
         } catch (e) {
-            // Ignore if it already exists due to parallel form field parsing race conditions
             if (e.code !== 'EEXIST') console.error("Error creating directory:", e);
         }
         

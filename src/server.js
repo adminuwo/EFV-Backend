@@ -80,8 +80,14 @@ if (commonDomain) {
     domains.forEach(d => {
         if (!allowedOrigins.includes(`https://${d}`)) allowedOrigins.push(`https://${d}`);
         if (!allowedOrigins.includes(`https://www.${d}`)) allowedOrigins.push(`https://www.${d}`);
+        if (!allowedOrigins.includes(`http://${d}`)) allowedOrigins.push(`http://${d}`);
+        if (!allowedOrigins.includes(`http://www.${d}`)) allowedOrigins.push(`http://www.${d}`);
     });
 }
+
+// Fallback: Always include the main live domain
+if (!allowedOrigins.includes('https://efvframework.com')) allowedOrigins.push('https://efvframework.com');
+if (!allowedOrigins.includes('https://www.efvframework.com')) allowedOrigins.push('https://www.efvframework.com');
 
 app.use((req, res, next) => {
     // Support Google Login popups by allowing cross-origin-opener-policy
@@ -97,17 +103,28 @@ app.use((req, res, next) => {
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow all localhost origins during development
-        if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
+        // 1. Allow bypass for non-browser clients or same-origin
+        if (!origin) return callback(null, true);
+        
+        // 2. Exact match check
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+
+        // 3. Substring/Domain checks (helpful for dev/production variations)
+        const isAllowed = origin.includes('localhost') || 
+                         origin.includes('127.0.0.1') || 
+                         origin.endsWith('efvframework.com') ||
+                         origin.includes('asia-south1.run.app'); // Allow the backend to call itself if needed
+
+        if (isAllowed) {
             callback(null, true);
         } else {
-            console.warn('Blocked by CORS:', origin);
-            callback(new Error('Not allowed by CORS'));
+            console.warn('Blocked by CORS Policy | Requested Origin:', origin);
+            callback(new Error('CORS Access Denied: Origin not whitelisted'));
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Range'],
-    exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'],
+    exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Range', 'X-Upload-Version'],
     credentials: true
 }));
 app.use(express.json());
