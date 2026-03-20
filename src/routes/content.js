@@ -307,6 +307,15 @@ router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async
     try {
         const product = await findProductById(req.params.productId);
         const idx = parseInt(req.params.chapterIndex);
+
+        // FALLBACK FOR SINGLE-FILE AUDIOBOOKS
+        // If there are literally NO chapters, but there's a main filePath, treat chapter 0 as that filePath
+        if (product && (!product.chapters || product.chapters.length === 0) && idx === 0 && product.filePath) {
+            console.log(`🎵 [CHAPTER] FALLBACK: Serving main filePath as Chapter 0 for ${product.title}`);
+            const virtualChapter = { filePath: product.filePath, title: product.title, chapterNumber: 1 };
+            return await streamFile(virtualChapter, req, res);
+        }
+
         if (!product || !product.chapters) return res.status(404).json({ message: 'Product or chapters not found' });
 
         const sortedChapters = [...product.chapters].sort((a, b) => a.chapterNumber - b.chapterNumber);
@@ -319,57 +328,58 @@ router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async
             console.error(`❌ [CHAPTER] Chapter ${idx} exists but filePath is EMPTY for: ${product.title}`);
             return res.status(404).json({ message: `Chapter ${idx + 1} audio file has not been uploaded yet.` });
         }
-        console.log(`🎵 [CHAPTER] Product: ${product.title} | Chapter: ${idx} | filePath: ${chapter.filePath}`);
-        console.log(`🎵 [CHAPTER] hasGCS: ${hasGCS} | filePath starts with http: ${chapter.filePath.startsWith('http')}`);
-    
 
-        const bucketName = process.env.GCS_BUCKET_NAME;
-
-        if (chapter.filePath.startsWith('http') && hasGCS) {
-            try {
-                const relPath = getGcsRelativePath(chapter.filePath);
-                if (relPath) {
-                    console.log(`☁️ Proxying GCS Chapter Stream for: ${relPath}`);
-                    return await streamFromGCS(relPath, req, res);
-                }
-            } catch (err) {
-                console.warn(`⚠️ Chapter GCS Proxy fail: ${err.message}.`);
-                return res.status(500).json({ message: 'Cloud stream failed.' });
-            }
-        }
-
-        // --- LOCAL FALLBACK ---
-        let cleanPath = chapter.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
-        const relativeToUploads = cleanPath.replace(/^src\/uploads\//, '').replace(/^uploads\//, '');
-
-        const searchPaths = [
-            path.resolve(__dirname, '../../', cleanPath),
-            path.resolve(__dirname, '../../src/uploads/', relativeToUploads),
-            path.resolve(__dirname, '../../uploads/', relativeToUploads),
-            path.resolve(__dirname, '../../src/', cleanPath),
-            path.join(process.cwd(), cleanPath),
-            path.join(process.cwd(), 'src', cleanPath)
-        ];
-
-        let finalPath = null;
-        for (const p of searchPaths) {
-            if (fs.existsSync(p) && !fs.lstatSync(p).isDirectory()) {
-                finalPath = p;
-                break;
-            }
-        }
-
-        if (!finalPath) {
-            console.error(`❌ Chapter File Not Found: Tried ${searchPaths.length} locations for ${cleanPath}`);
-            return res.status(404).json({ message: 'Local chapter file not found on server.' });
-        }
-
-        console.log(`🎵 Streaming Chapter ${idx}: ${finalPath}`);
-        streamLocalFile(finalPath, req, res);
+        await streamFile(chapter, req, res);
     } catch (error) {
         console.error('CHAPTER stream error:', error);
         res.status(500).json({ message: error.message });
     }
 });
+
+// Helper to stream file (GCS or Local)
+async function streamFile(target, req, res) {
+    const hasGCS = process.env.GCS_BUCKET_NAME !== undefined;
+    if (target.filePath.startsWith('http') && hasGCS) {
+        try {
+            const relPath = getGcsRelativePath(target.filePath);
+            if (relPath) {
+                console.log(`☁️ Proxying GCS Stream for: ${relPath}`);
+                return await streamFromGCS(relPath, req, res);
+            }
+        } catch (err) {
+            console.warn(`⚠️ GCS Proxy fail: ${err.message}.`);
+        }
+    }
+
+    // --- LOCAL FALLBACK ---
+    let cleanPath = target.filePath.replace(/^https?:\/\/[^\/]+\/[^\/]+\//, '').replace(/^\//, '');
+    const relativeToUploads = cleanPath.replace(/^src\/uploads\//, '').replace(/^uploads\//, '');
+
+    const searchPaths = [
+        path.resolve(__dirname, '../../', cleanPath),
+        path.resolve(__dirname, '../../src/uploads/', relativeToUploads),
+        path.resolve(__dirname, '../../uploads/', relativeToUploads),
+        path.resolve(__dirname, '../../src/', cleanPath),
+        path.join(process.cwd(), cleanPath),
+        path.join(process.cwd(), 'src', cleanPath)
+    ];
+
+    let finalPath = null;
+    for (const p of searchPaths) {
+        if (fs.existsSync(p) && !fs.lstatSync(p).isDirectory()) {
+            finalPath = p;
+            break;
+        }
+    }
+
+    if (!finalPath) {
+        console.error(`❌ File Not Found: Tried ${searchPaths.length} locations for ${cleanPath}`);
+        return res.status(404).json({ message: 'Local file not found on server.' });
+    }
+
+    console.log(`🎵 Streaming file: ${finalPath}`);
+    streamLocalFile(finalPath, req, res);
+}
+
 
 module.exports = router;
