@@ -216,14 +216,12 @@ router.get('/audio/:productId', protect, validatePurchase, async (req, res) => {
             try {
                 const relPath = getGcsRelativePath(product.filePath);
                 if (relPath) {
-                    const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
-                    const [url] = await storage.bucket(bucketName).file(relPath).getSignedUrl(options);
-                    return res.redirect(url);
+                    console.log(`☁️ Proxying GCS Audio Stream for: ${relPath}`);
+                    return await streamFromGCS(relPath, req, res);
                 }
             } catch (err) {
-                console.warn(`⚠️ GCS Audio fail: ${err.message}. Proxying...`);
-                const relPath = getGcsRelativePath(product.filePath);
-                if (relPath) return streamFromGCS(relPath, req, res);
+                console.warn(`⚠️ GCS Audio Proxy fail: ${err.message}.`);
+                return res.status(500).json({ message: 'Cloud stream failed.' });
             }
         }
 
@@ -282,14 +280,12 @@ router.get('/chapter/:productId/:chapterIndex', protect, validatePurchase, async
             try {
                 const relPath = getGcsRelativePath(chapter.filePath);
                 if (relPath) {
-                    const options = { version: 'v4', action: 'read', expires: Date.now() + 60 * 60 * 1000 };
-                    const [url] = await storage.bucket(bucketName).file(relPath).getSignedUrl(options);
-                    return res.redirect(url);
+                    console.log(`☁️ Proxying GCS Chapter Stream for: ${relPath}`);
+                    return await streamFromGCS(relPath, req, res);
                 }
             } catch (err) {
-                console.warn(`⚠️ Chapter GCS fail: ${err.message}. Proxying...`);
-                const relPath = getGcsRelativePath(chapter.filePath);
-                if (relPath) return streamFromGCS(relPath, req, res);
+                console.warn(`⚠️ Chapter GCS Proxy fail: ${err.message}.`);
+                return res.status(500).json({ message: 'Cloud stream failed.' });
             }
         }
 
