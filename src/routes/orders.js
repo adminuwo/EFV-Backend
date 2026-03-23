@@ -7,6 +7,7 @@ const { createCashfreeOrder, verifyCashfreePayment } = require('../utils/cashfre
 const { createRazorpayOrder, verifyRazorpaySignature, fetchRazorpayPayment } = require('../utils/razorpay');
 const { processPartnerSale } = require('../utils/partnerUtils');
 const path = require('path');
+const whatsappService = require('../services/whatsappService');
 
 
 // Get current user's orders
@@ -209,6 +210,11 @@ router.post('/', async (req, res) => {
         if (newOrder.partnerRef) {
             await processPartnerSale(newOrder, newOrder.partnerRef);
         }
+
+        // 📱 WhatsApp Order Confirmation (Public)
+        try {
+            await whatsappService.sendOrderPlaced(newOrder);
+        } catch (err) {}
 
         res.status(201).json(newOrder);
 
@@ -479,6 +485,11 @@ router.post('/verify-cashfree', protect, async (req, res) => {
             await processPartnerSale(newOrder, newOrder.partnerRef);
         }
 
+        // 📱 WhatsApp Order Confirmation (Cashfree)
+        try {
+            await whatsappService.sendOrderPlaced(newOrder);
+        } catch (err) {}
+
         res.status(201).json({ success: true, order: newOrder, message: 'Payment verified and order placed' });
 
     } catch (error) {
@@ -711,6 +722,11 @@ router.post('/cod', protect, async (req, res) => {
         });
         await user.save();
 
+        // 📱 WhatsApp Order Confirmation (COD)
+        try {
+            await whatsappService.sendOrderPlaced(newOrder);
+        } catch (err) {}
+
         res.status(201).json({ success: true, order: newOrder });
 
     } catch (error) {
@@ -831,6 +847,19 @@ router.put('/:id/status', adminAuth, async (req, res) => {
                 }
             } catch (notifyErr) {
                 console.error('Error sending status notification:', notifyErr);
+            }
+        // 📱 WhatsApp Status Notifications
+        if (status !== oldStatus) {
+            try {
+                if (status === 'Shipped') {
+                    await whatsappService.sendOrderShipped(order);
+                } else if (status === 'Delivered') {
+                    await whatsappService.sendOrderDelivered(order);
+                } else if (status === 'Cancelled') {
+                    await whatsappService.sendOrderCancelled(order);
+                }
+            } catch (wErr) {
+                console.error('WhatsApp notify error:', wErr);
             }
         }
 
@@ -1059,6 +1088,13 @@ router.post('/nimbus-webhook', async (req, res) => {
                         timestamp: new Date()
                     });
                     await order.save();
+
+                    // 📱 WhatsApp Notify via Webhook Sync
+                    try {
+                        if (newStatus === 'Shipped') await whatsappService.sendOrderShipped(order);
+                        else if (newStatus === 'Delivered') await whatsappService.sendOrderDelivered(order);
+                        else if (newStatus === 'Cancelled') await whatsappService.sendOrderCancelled(order);
+                    } catch (e) {}
                 }
             }
         }
@@ -1111,6 +1147,13 @@ router.get('/sync-all', protect, async (req, res) => {
                             });
                             await order.save();
                             updatedCount++;
+
+                            // 📱 WhatsApp Notify via Sync All
+                            try {
+                                if (newStatus === 'Shipped') await whatsappService.sendOrderShipped(order);
+                                else if (newStatus === 'Delivered') await whatsappService.sendOrderDelivered(order);
+                                else if (newStatus === 'Cancelled') await whatsappService.sendOrderCancelled(order);
+                            } catch (e) {}
                         }
                     }
                 } catch (err) {
@@ -1197,6 +1240,13 @@ router.post('/cancel/:orderId', protect, async (req, res) => {
                 isRead: false
             });
             await user.save();
+        }
+
+        // 📱 WhatsApp Cancellation Notify
+        try {
+            await whatsappService.sendOrderCancelled(order, reason);
+        } catch (wErr) {
+            console.error('WhatsApp cancel error:', wErr);
         }
 
         res.json({
@@ -1527,6 +1577,11 @@ router.post('/verify-razorpay', protect, async (req, res) => {
         if (newOrder.partnerRef) {
             await processPartnerSale(newOrder, newOrder.partnerRef);
         }
+
+        // 📱 WhatsApp Order Confirmation (Razorpay)
+        try {
+            await whatsappService.sendOrderPlaced(newOrder);
+        } catch (err) {}
 
         res.status(201).json({ success: true, order: newOrder, message: 'Payment verified and order placed' });
 

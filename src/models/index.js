@@ -350,6 +350,23 @@ const orderCancellationSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const botLeadSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    phone: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const chatConversationSchema = new mongoose.Schema({
+    email: { type: String, required: true },
+    messages: [{
+        role: { type: String, enum: ['user', 'ai'] },
+        content: String,
+        timestamp: { type: Date, default: Date.now }
+    }],
+    createdAt: { type: Date, default: Date.now }
+});
+
 module.exports = {
     User: mongoose.model('User', userSchema),
     Product: mongoose.model('Product', productSchema),
@@ -367,5 +384,8 @@ module.exports = {
     PartnerSale: mongoose.model('PartnerSale', partnerSaleSchema),
     PartnerMessage: mongoose.model('PartnerMessage', partnerMessageSchema),
     ReturnRequest: mongoose.model('ReturnRequest', returnRequestSchema),
-    OrderCancellation: mongoose.model('OrderCancellation', orderCancellationSchema)
+    OrderCancellation: mongoose.model('OrderCancellation', orderCancellationSchema),
+    BotLead: mongoose.model('BotLead', botLeadSchema),
+    ChatConversation: mongoose.model('ChatConversation', chatConversationSchema),
+    NotificationLog: require('./NotificationLog')
 };

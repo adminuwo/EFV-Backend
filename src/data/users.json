@@ -21,7 +21,7 @@
     "updatedAt": "2026-03-06T06:15:35.643Z"
   },
   {
-    "name": "Deepak Kumar ",
+    "name": "Aditi",
     "email": "aditi@uwo24.com",
     "password": "$2a$10$h2x3t8WFSll6gO.gjFRAquc4zNVQoORJgYaLMDWVJsRiJerH9u0Li",
     "role": "user",
@@ -37,7 +37,7 @@
     ],
     "_id": "aditi_local_test",
     "createdAt": "2026-03-06T13:40:00.000Z",
-    "updatedAt": "2026-03-12T08:21:27.110Z",
+    "updatedAt": "2026-03-23T06:09:46.911Z",
     "purchasedProducts": [
       "efv_v1_audiobook"
     ],

@@ -116,7 +116,7 @@ const {
 
 
 // ================= ENV VARIABLES =================
-const project = process.env.GCP_PROJECT_ID || process.env.GCS_PROJECT_ID || 'efvframework';
+const project = process.env.GCP_PROJECT_ID || process.env.GCS_PROJECT_ID || 'unified-web-options';
 const location = process.env.GOOGLE_CLOUD_LOCATION || "asia-south1";
 
 console.log(`📡 [AI Config] Using Project: ${project} | Location: ${location}`);
@@ -129,8 +129,8 @@ const vertexAI = new VertexAI({
 
 
 // ================= MODELS =================
-const textModel = "gemini-1.5-flash";   // Using stable 1.5 PRO/FLASH
-const visionModel = "gemini-1.5-flash";
+const textModel = "gemini-2.5-flash";   // Using stable model version
+const visionModel = "gemini-2.5-flash";
 
 
 // ================= MAIN EFV AI MODEL =================

@@ -232,5 +232,7 @@ module.exports = {
     Partner: JsonModel.createModel('partners.json'),
     PartnerMessage: JsonModel.createModel('partner_messages.json'),
     ReturnRequest: JsonModel.createModel('return_requests.json'),
-    OrderCancellation: JsonModel.createModel('order_cancellations.json')
+    OrderCancellation: JsonModel.createModel('order_cancellations.json'),
+    BotLead: JsonModel.createModel('bot_leads.json'),
+    ChatConversation: JsonModel.createModel('chat_conversations.json')
 };

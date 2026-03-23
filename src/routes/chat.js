@@ -1,24 +1,82 @@
 const express = require('express');
 const router = express.Router();
+const sendEmail = require('../utils/emailService');
+const { User, BotLead, ChatConversation } = require('../models');
+
+// Bot lead registration endpoint
+// Bot lead registration endpoint
+router.post('/register', async (req, res) => {
+    try {
+        const { name, email, phone } = req.body;
+        if (!name || !email) {
+            return res.status(400).json({ error: 'Name and Email are required' });
+        }
+
+        console.log(`📩 New Bot Lead: ${name} (${email})`);
+
+        let existingLead = await BotLead.findOne({ email });
+        if (existingLead) {
+            return res.status(400).json({ error: 'Email already registered.' });
+        }
+
+        const newLead = new BotLead({ name, email, phone: phone || '' });
+        await newLead.save();
+
+        // 1. Send notification to admin
+        try {
+            await sendEmail({
+                email: 'admin@uwo24.com',
+                subject: 'New User Registered - EFV Intelligence',
+                html: `
+                    <div style="font-family: sans-serif; color: #333;">
+                        <h2 style="color: #d4af37;">New user joined EFV Intelligence</h2>
+                        <p><strong>Name:</strong> ${name}</p>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+                        <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                `
+            });
+        } catch (emailErr) {
+            console.error('❌ Notification email failed:', emailErr.message);
+        }
+
+        res.json({
+            success: true,
+            message: 'Registration successful',
+            email: email
+        });
+
+    } catch (error) {
+        console.error('Registration API Error:', error);
+        res.status(500).json({ error: 'Failed to process registration' });
+    }
+});
 
 // Chat endpoint
+// Chat endpoint
 router.post('/message', async (req, res) => {
-    try {
-        const { message, history = [] } = req.body;
+    const { message, history = [], email } = req.body;
+    let text = '';
+    let isDemoResponse = false;
 
-        if (!message) {
-            return res.status(400).json({ error: 'Message is required' });
-        }
+    if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+    }
+
+    try {
 
         // --- RAG: Knowledge Retrieval (Robust Engine) ---
         let ragContext = "";
         if (!global.ragCache) global.ragCache = { text: "", lastSync: 0 };
-        
+        if (!global.pdfContentCache) global.pdfContentCache = {}; // Initialize PDF content cache
+
         try {
             const fs = require('fs');
             const path = require('path');
-            const pdf = require('pdf-parse');
-            
+            const pdfParse = require('pdf-parse');
+            const pdf = pdfParse.PDFParse || pdfParse.default || (typeof pdfParse === 'function' ? pdfParse : null);
+
             const ragDir = path.join(__dirname, '..', 'uploads', 'rag');
             const now = Date.now();
 
@@ -36,8 +94,13 @@ router.post('/message', async (req, res) => {
                             const buffer = fs.readFileSync(filePath);
                             let extracted = "";
                             if (fileName.endsWith('.pdf')) {
-                                const data = await pdf(buffer);
-                                extracted = data.text;
+                                if (global.pdfContentCache[fileName]) {
+                                    extracted = global.pdfContentCache[fileName];
+                                } else {
+                                    const data = await pdf(buffer);
+                                    extracted = data.text;
+                                    global.pdfContentCache[fileName] = extracted;
+                                }
                             } else if (fileName.endsWith('.txt')) {
                                 extracted = buffer.toString();
                             }
@@ -76,7 +139,7 @@ router.post('/message', async (req, res) => {
                 if (combinedText) {
                     global.ragCache.text = combinedText;
                     global.ragCache.lastSync = now;
-                    console.log(`🧠 RAG REFRESHED: Loaded ${fileCount} files (${Math.round(combinedText.length/1024)} KB)`);
+                    console.log(`🧠 RAG REFRESHED: Loaded ${fileCount} files (${Math.round(combinedText.length / 1024)} KB)`);
                 }
             }
 
@@ -84,11 +147,11 @@ router.post('/message', async (req, res) => {
             if (global.ragCache.text) {
                 const queryWords = message.toLowerCase().split(/\s+/).filter(w => w.length > 3);
                 const chunks = global.ragCache.text.split(/\[SOURCE: /);
-                
+
                 let bestSnippets = [];
                 for (const chunk of chunks) {
                     if (!chunk.trim()) continue;
-                    
+
                     // Simple relevance score based on keyword frequency
                     let score = 0;
                     queryWords.forEach(word => {
@@ -115,8 +178,12 @@ router.post('/message', async (req, res) => {
             }
         } catch (ragError) { console.error('🔴 RAG Fatal Error:', ragError); }
 
-        let text = '';
-        let isDemoResponse = false;
+        // --- RAG-First Response Check ---
+        if (ragContext && ragContext.length > 200) {
+            // If we found significant RAG context, use it to generate a response via Vertex first
+            // or just use it as the answer if it's very specific (but better to use AI to format it)
+            console.log("💎 Using RAG context for primary response.");
+        }
 
         try {
             // Require the Vertex AI model
@@ -132,13 +199,17 @@ router.post('/message', async (req, res) => {
 
             // Send message with RAG context if found
             const finalPrompt = ragContext ? `Using the following context from our knowledge base: ${ragContext}\n\nUser Question: ${message}` : message;
-            
+
             const result = await chat.sendMessage(finalPrompt);
             const response = result.response;
             text = response.candidates[0].content.parts[0].text;
 
         } catch (aiError) {
-            console.warn('⚠️ Vertex AI failed or not configured. Switching to Demo Mode.', aiError.message);
+            // Already handled by Demo fallback if enabled
+        }
+
+        // --- Demo Fallback if Vertex AI failed or was skipped ---
+        if (!text) {
             isDemoResponse = true;
 
             // Dictionary of keywords to detect Hindi
@@ -244,8 +315,6 @@ router.post('/message', async (req, res) => {
             // Check specific volumes/books first
             for (let i = 1; i <= 9; i++) {
                 if (lowerMsg.includes(`vol ${i}`) || lowerMsg.includes(`volume ${i}`) || lowerMsg.includes(`pustak ${i}`) || lowerMsg.includes(`kitab ${i}`)) {
-                    // Since we only detailed Vol 1 & 2 explicitly above, we can generate generic ones for 3-9 or add them to KB.
-                    // For demo purposes, we'll map all specific generic volume queries if not found to a generic structure or detailed ones if added.
                     if (knowledgeBase[`vol${i}`]) {
                         responseKey = `vol${i}`;
                     } else {
@@ -283,20 +352,71 @@ router.post('/message', async (req, res) => {
                     : "I am EFV™ Intelligence (Demo Mode). I am currently calibrating. Please ask about 'Home', 'Gallery', 'Volume 1', or 'Alignment'.";
             }
         }
-
-        res.json({
-            response: text,
-            isDemo: isDemoResponse,
-            timestamp: new Date().toISOString()
-        });
-
     } catch (error) {
         console.error('Chat API Error:', error);
-        res.status(500).json({
-            error: 'Failed to process message',
-            details: error.message
-        });
+        return res.status(500).json({ error: 'Failed to process message', details: error.message });
     }
+
+
+        if (email && text) {
+        try {
+            let conv = await ChatConversation.findOne({ email });
+            if (!conv) {
+                conv = new ChatConversation({ email, messages: [] });
+            }
+            conv.messages.push({ role: 'user', content: message, timestamp: new Date() });
+            conv.messages.push({ role: 'ai', content: text, timestamp: new Date() });
+            await conv.save();
+        } catch (convErr) {
+            console.error('❌ Error saving conversation:', convErr.message);
+        }
+    }
+
+    res.json({
+        response: text,
+        isDemo: isDemoResponse,
+        timestamp: new Date().toISOString()
+    });
 });
+
+// Helper function to pre-load RAG content on startup
+async function preloadRAG() {
+    try {
+        console.log('🔄 Pre-loading RAG knowledge base...');
+        const path = require('path');
+        const fs = require('fs');
+        const ragDir = path.join(__dirname, '..', 'uploads', 'rag');
+        const pdfParse = require('pdf-parse');
+        const pdf = pdfParse.PDFParse || pdfParse.default || (typeof pdfParse === 'function' ? pdfParse : null);
+
+        if (fs.existsSync(ragDir) && pdf) {
+            const files = fs.readdirSync(ragDir);
+            let combinedText = "";
+            if (!global.pdfContentCache) global.pdfContentCache = {};
+            
+            for (const fileName of files) {
+                if (fileName.endsWith('.pdf')) {
+                    const filePath = path.join(ragDir, fileName);
+                    const buffer = fs.readFileSync(filePath);
+                    const data = await pdf(buffer);
+                    global.pdfContentCache[fileName] = data.text;
+                    combinedText += `\n[SOURCE: ${fileName}]\n${data.text}\n`;
+                } else if (fileName.endsWith('.txt')) {
+                    const content = fs.readFileSync(path.join(ragDir, fileName), 'utf8');
+                    combinedText += `\n[SOURCE: ${fileName}]\n${content}\n`;
+                }
+            }
+            if (combinedText) {
+                global.ragCache = { text: combinedText, lastSync: Date.now() };
+                console.log(`✅ RAG Pre-loaded: ${files.length} files cached.`);
+            }
+        }
+    } catch (err) {
+        console.warn('⚠️ RAG Pre-load warning:', err.message);
+    }
+}
+
+// Start pre-loading in background
+preloadRAG();
 
 module.exports = router;

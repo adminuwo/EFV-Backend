@@ -1,0 +1,30 @@
+[
+  {
+    "email": "nehalakhera04@gmail.com",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": "2026-03-21T12:23:30.180Z"
+      },
+      {
+        "role": "ai",
+        "content": "Hello! I am EFV Intelligence, the official AI assistant for the EFV™ (Energy Frequency Vibration) platform.\n\nHow may I assist you today?",
+        "timestamp": "2026-03-21T12:23:30.180Z"
+      },
+      {
+        "role": "user",
+        "content": "what i instagram???",
+        "timestamp": "2026-03-21T12:36:57.300Z"
+      },
+      {
+        "role": "ai",
+        "content": "It seems you're asking about **Instagram**.\n\n**Instagram** is a popular social media platform primarily focused on photo and video sharing. Users can:\n\n*   Share photos and short videos with their followers.\n*   Apply filters and editing tools to their content.\n*   Discover content from other users, brands, and public figures.\n*   Communicate through direct messages and comments.\n*   Utilize features like Stories, Reels, and Live video.\n\nIt's a platform widely used for personal connection, creative expression, and marketing.\n\nWhile Instagram is a platform for sharing and connection, the **EFV™ (Energy Frequency Vibration) Alignment Intelligence System** focuses on a different kind of connection – aligning your inner energy, frequency, and vibration for personal growth and transformation, as developed by **Mr. Gurumukh P. Ahuja**.",
+        "timestamp": "2026-03-21T12:36:57.300Z"
+      }
+    ],
+    "_id": "mn0au83qhr5r8rluicd",
+    "createdAt": "2026-03-21T12:23:30.182Z",
+    "updatedAt": "2026-03-21T12:36:57.301Z"
+  }
+]

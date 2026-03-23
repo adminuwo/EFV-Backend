@@ -10,7 +10,7 @@ const path = require('path');
 const nimbusShipping = require("./routes/nimbusShipping").default || require("./routes/nimbusShipping");
 
 // Load .env from parent directory (EFV-Backend/.env)
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true });
 const connectDB = require('./config/db');
 
 // Connect to Database
