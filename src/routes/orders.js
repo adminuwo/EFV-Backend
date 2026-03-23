@@ -845,21 +845,20 @@ router.put('/:id/status', adminAuth, async (req, res) => {
                         }
                     }
                 }
+                // 📱 WhatsApp Status Notifications
+                try {
+                    if (status === 'Shipped') {
+                        await whatsappService.sendOrderShipped(order);
+                    } else if (status === 'Delivered') {
+                        await whatsappService.sendOrderDelivered(order);
+                    } else if (status === 'Cancelled') {
+                        await whatsappService.sendOrderCancelled(order);
+                    }
+                } catch (wErr) {
+                    console.error('WhatsApp notify error:', wErr);
+                }
             } catch (notifyErr) {
                 console.error('Error sending status notification:', notifyErr);
-            }
-        // 📱 WhatsApp Status Notifications
-        if (status !== oldStatus) {
-            try {
-                if (status === 'Shipped') {
-                    await whatsappService.sendOrderShipped(order);
-                } else if (status === 'Delivered') {
-                    await whatsappService.sendOrderDelivered(order);
-                } else if (status === 'Cancelled') {
-                    await whatsappService.sendOrderCancelled(order);
-                }
-            } catch (wErr) {
-                console.error('WhatsApp notify error:', wErr);
             }
         }
 
