@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Order, Product, User, DigitalLibrary, Coupon } = require('../models');
+const { Order, Product, User, DigitalLibrary, Coupon, Cart } = require('../models');
 const adminAuth = require('../middleware/adminAuth');
 const { protect } = require('../middleware/auth');
 const { createCashfreeOrder, verifyCashfreePayment } = require('../utils/cashfree');
@@ -8,6 +8,7 @@ const { createRazorpayOrder, verifyRazorpaySignature, fetchRazorpayPayment } = r
 const { processPartnerSale } = require('../utils/partnerUtils');
 const path = require('path');
 const whatsappService = require('../services/whatsappService');
+const jobService = require('../services/jobService');
 
 
 // Get current user's orders
@@ -170,10 +171,28 @@ router.post('/', async (req, res) => {
             }
         } catch (e) { }
 
+        const address = {
+            fullName: customer.fullName || customer.name || 'Customer',
+            email: customer.email,
+            phone: customer.phone || '0000000000',
+            house: customer.street || customer.house || '',
+            area: customer.area || '',
+            city: customer.city || 'Unknown',
+            state: customer.state || '',
+            pincode: customer.pincode || customer.zip || '000000',
+            country: customer.country || 'India'
+        };
+
         const newOrder = await Order.create({
             orderId: 'ORD-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000),
             userId: userId,
-            customer,
+            customer: {
+                ...address,
+                name: address.fullName,
+                address: address, // Store nested object too for UI parity
+                zip: address.pincode,
+                city: address.city
+            },
             items: orderItems,
             totalAmount: Math.round(finalAmount),
             discountAmount: Math.round(discountAmount),
@@ -211,10 +230,17 @@ router.post('/', async (req, res) => {
             await processPartnerSale(newOrder, newOrder.partnerRef);
         }
 
-        // 📱 WhatsApp Order Confirmation (Public)
+        // 🕒 Schedule Delayed WhatsApp Order Confirmation (2 min delay)
         try {
-            await whatsappService.sendOrderPlaced(newOrder);
-        } catch (err) {}
+            await jobService.schedule(newOrder.userId || customer.email, 'OrderPlaced', 2, { orderId: newOrder.orderId });
+            // Cancel any pending Abandoned Cart jobs for this user
+            if (newOrder.userId) {
+                await jobService.cancel(newOrder.userId, 'AbandonedCart');
+                await Cart.findOneAndUpdate({ userId: newOrder.userId }, { isPurchased: true, remindersSent: 0 });
+            }
+        } catch (err) {
+            console.error('Job Scheduling Error:', err);
+        }
 
         res.status(201).json(newOrder);
 
@@ -304,7 +330,8 @@ router.post('/verify-cashfree', protect, async (req, res) => {
                     fullName: directCustomer.name,
                     email: directCustomer.email,
                     phone: directCustomer.phone || user.phone || '0000000000',
-                    house: directCustomer.address || '',
+                    house: directCustomer.street || directCustomer.address || '',
+                    area: directCustomer.area || '',
                     city: directCustomer.city || 'Unknown',
                     state: directCustomer.state || '',
                     pincode: directCustomer.pincode || directCustomer.zip || '000000',
@@ -485,10 +512,14 @@ router.post('/verify-cashfree', protect, async (req, res) => {
             await processPartnerSale(newOrder, newOrder.partnerRef);
         }
 
-        // 📱 WhatsApp Order Confirmation (Cashfree)
+        // 🕒 Schedule Delayed WhatsApp Order Confirmation (2 min delay)
         try {
-            await whatsappService.sendOrderPlaced(newOrder);
-        } catch (err) {}
+            await jobService.schedule(user._id, 'OrderPlaced', 2, { orderId: newOrder.orderId });
+            await jobService.cancel(user._id, 'AbandonedCart');
+            await Cart.findOneAndUpdate({ userId: user._id }, { isPurchased: true, remindersSent: 0 });
+        } catch (err) {
+            console.error('Job Scheduling Error (Cashfree):', err);
+        }
 
         res.status(201).json({ success: true, order: newOrder, message: 'Payment verified and order placed' });
 
@@ -612,11 +643,16 @@ router.post('/cod', protect, async (req, res) => {
                 name: customer.fullName || customer.name || 'Customer',
                 email: customer.email,
                 phone: customer.phone,
-                address: customer.street + ', ' + (customer.area || ''),
-                city: customer.city,
-                state: customer.state,
-                country: customer.country || 'India',
-                pincode: customer.pincode
+                address: {
+                    house: customer.street || customer.house || '',
+                    area: customer.area || '',
+                    city: customer.city || 'Unknown',
+                    state: customer.state || '',
+                    pincode: customer.pincode || customer.zip || '000000',
+                    country: customer.country || 'India'
+                },
+                city: customer.city || 'Unknown',
+                zip: customer.pincode || customer.zip || '000000'
             },
             items: processedItems.map(item => ({
                 productId: item.productId,
@@ -668,7 +704,8 @@ router.post('/cod', protect, async (req, res) => {
                     fullName: customer.fullName || customer.name,
                     email: customer.email,
                     phone: cleanPhone,
-                    house: customer.street,
+                    house: customer.street || customer.house,
+                    area: customer.area || '',
                     city: customer.city,
                     state: customer.state,
                     pincode: customer.pincode
@@ -722,10 +759,16 @@ router.post('/cod', protect, async (req, res) => {
         });
         await user.save();
 
-        // 📱 WhatsApp Order Confirmation (COD)
+        // 🕒 Schedule Delayed WhatsApp Order Confirmation (2 min delay)
         try {
-            await whatsappService.sendOrderPlaced(newOrder);
-        } catch (err) {}
+            await jobService.schedule(newOrder.userId || newOrder.customer.email, 'OrderPlaced', 2, { orderId: newOrder.orderId });
+            if (newOrder.userId) {
+                await jobService.cancel(newOrder.userId, 'AbandonedCart');
+                await Cart.findOneAndUpdate({ userId: newOrder.userId }, { isPurchased: true, remindersSent: 0 });
+            }
+        } catch (err) {
+            console.error('Job Scheduling Error (COD):', err);
+        }
 
         res.status(201).json({ success: true, order: newOrder });
 
@@ -1375,12 +1418,13 @@ router.post('/verify-razorpay', protect, async (req, res) => {
         const address = directCustomer ? {
             fullName: directCustomer.name,
             email   : directCustomer.email,
-            phone   : directCustomer.phone || user.phone || '0000000000',
-            house   : directCustomer.address || '',
-            city    : directCustomer.city    || 'Unknown',
-            state   : directCustomer.state   || '',
-            pincode : directCustomer.pincode || '000000',
-            country : directCustomer.country || 'India'
+            phone   : directCustomer.phone    || user.phone || '0000000000',
+            house   : directCustomer.street   || directCustomer.address || '',
+            area    : directCustomer.area     || '',
+            city    : directCustomer.city     || 'Unknown',
+            state   : directCustomer.state    || '',
+            pincode : directCustomer.pincode  || '000000',
+            country : directCustomer.country  || 'India'
         } : null;
 
         if (!address) return res.status(400).json({ message: 'Shipping address missing' });
@@ -1577,10 +1621,14 @@ router.post('/verify-razorpay', protect, async (req, res) => {
             await processPartnerSale(newOrder, newOrder.partnerRef);
         }
 
-        // 📱 WhatsApp Order Confirmation (Razorpay)
+        // 🕒 Schedule Delayed WhatsApp Order Confirmation (2 min delay)
         try {
-            await whatsappService.sendOrderPlaced(newOrder);
-        } catch (err) {}
+            await jobService.schedule(newOrder.userId, 'OrderPlaced', 2, { orderId: newOrder.orderId });
+            await jobService.cancel(newOrder.userId, 'AbandonedCart');
+            await Cart.findOneAndUpdate({ userId: newOrder.userId }, { isPurchased: true, remindersSent: 0 });
+        } catch (err) {
+            console.error('Job Scheduling Error (Razorpay):', err);
+        }
 
         res.status(201).json({ success: true, order: newOrder, message: 'Payment verified and order placed' });
 

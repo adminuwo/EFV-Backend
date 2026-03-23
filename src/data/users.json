@@ -74,6 +74,22 @@
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLiXBZDTWo-vgHkHRlbgCn_bHuivQ7wnyjH9t1O903oQ_gF5Q=s96-c",
     "notifications": [
       {
+        "_id": "purchase-cod-1774256304548",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-1774256300395455 has been placed via COD. Total: ₹377.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "createdAt": "2026-03-23T08:58:24.548Z"
+      },
+      {
+        "_id": "purchase-cod-1774255470917",
+        "title": "COD Order Confirmed! 📦",
+        "message": "Order EFV-1774255466179493 has been placed via COD. Total: ₹581.",
+        "type": "Order",
+        "link": "profile.html?tab=orders",
+        "createdAt": "2026-03-23T08:44:30.917Z"
+      },
+      {
         "_id": "purchase-cf-1773048058791",
         "title": "Purchase Successful! 🎉",
         "message": "Thank you for your order ORD-058789955. Your items are being processed.",
@@ -98,11 +114,33 @@
         "message": "You've successfully connected with Google. Explore your secure library.",
         "isRead": false,
         "createdAt": "2026-03-06T12:07:30.354Z"
+      },
+      {
+        "title": "Order Cancelled",
+        "message": "Your order #EFV-1774255466179493 has been cancelled. Refund (if applicable) will be processed within 5–7 business days.",
+        "type": "Order",
+        "isRead": false
       }
     ],
     "_id": "mmeunvhwo82twuyusc",
     "createdAt": "2026-03-06T12:07:30.356Z",
-    "updatedAt": "2026-03-09T09:20:58.791Z"
+    "updatedAt": "2026-03-23T08:58:24.548Z",
+    "savedAddresses": [
+      {
+        "id": "addr_mn2xue67lft4g",
+        "fullName": "Abha Jatav",
+        "phone": "8982882237",
+        "pincode": "482002",
+        "state": "mp",
+        "city": "jabalpur",
+        "house": "34",
+        "area": "sadar cantt",
+        "landmark": "",
+        "type": "Home",
+        "isDefault": true,
+        "createdAt": "2026-03-23T08:43:01.567Z"
+      }
+    ]
   },
   {
     "name": "Devansh Tantway",

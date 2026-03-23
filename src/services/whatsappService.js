@@ -129,6 +129,81 @@ class WhatsAppService {
     }
 
     /**
+     * Send Abandoned Cart Recovery Message
+     * @param {object} user 
+     * @param {object} cart 
+     * @param {number} reminderNo 1 or 2
+     */
+    async sendAbandonedCartRecovery(user, cart, reminderNo) {
+        const customerName = user.name || 'Friend';
+        const productsCount = cart.items.length;
+        // Get the first product title for the message
+        const firstProduct = cart.items[0]?.productId?.title || 'items in your cart';
+        const productsDesc = productsCount > 1 ? `${firstProduct} and ${productsCount - 1} other item(s)` : firstProduct;
+        
+        // Direct Link to Cart
+        const cartLink = `https://efvframework.com/pages/cart.html`; // Should open user's cart page instantly
+
+        // Template components for 'cart_recovery'
+        // Body params: [CustomerName, ProductListDescription]
+        // Buttons: [CartLink]
+        const components = [
+            {
+                type: "body",
+                parameters: [
+                    { type: "text", text: customerName },
+                    { type: "text", text: productsDesc }
+                ]
+            },
+            {
+                type: "button",
+                sub_type: "url",
+                index: "0",
+                parameters: [{ type: "text", text: "cart.html" }] // Or just empty if base URL is cart
+            }
+        ];
+
+        const templateName = reminderNo === 1 ? "cart_reminder_v1" : "cart_urgency_v2";
+        
+        return await this.sendMessage(user.phone || '', templateName, components, `cart-${cart._id}`, user._id);
+    }
+
+    /**
+     * Process job from Worker
+     */
+    async processJob(job) {
+        try {
+            const { Order, User, Cart } = require('../models');
+
+            if (job.type === 'OrderPlaced') {
+                const orderIdStr = job.data.orderId;
+                const order = await Order.findOne({ orderId: orderIdStr }) || await Order.findById(orderIdStr);
+                if (!order) return false;
+                const result = await this.sendOrderPlaced(order);
+                return result.success;
+            }
+
+            if (job.type === 'AbandonedCart') {
+                const user = await User.findById(job.userId);
+                const cart = await Cart.findOne({ userId: job.userId }).populate('items.productId');
+                
+                if (!user || !cart || cart.items.length === 0 || cart.isPurchased) {
+                    console.log(`⏩ Skipping abandoned cart job: user=${!!user}, cartItems=${cart?.items?.length}, purchased=${cart?.isPurchased}`);
+                    return true; // Mark as completed (don't retry)
+                }
+
+                const result = await this.sendAbandonedCartRecovery(user, cart, job.data.reminderNo);
+                return result.success;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Job Process Error in WhatsAppService:', error);
+            return false;
+        }
+    }
+
+    /**
      * Send Shipping Update
      */
     async sendOrderShipped(order) {

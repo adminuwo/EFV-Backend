@@ -200,9 +200,8 @@ async function automateShipping(newOrder, address, physicalItems, paymentMethod)
 
         // 2. Prepare Payload
         const addressLine = [
-            address.house, address.street, address.area, address.landmark, address.fullAddress,
-            address.city, address.state, address.pincode
-        ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address not provided';
+            address.house, address.street, address.area, address.landmark, address.fullAddress
+        ].filter(item => item && item.toString().trim().length > 0).join(', ') || 'Address details missing';
 
         // Clean phone number (exactly 10 digits)
         const cleanPhone = (address.phone || '0000000000').toString().replace(/\D/g, '').slice(-10);
@@ -213,10 +212,10 @@ async function automateShipping(newOrder, address, physicalItems, paymentMethod)
                 name: address.fullName || address.name || 'Customer',
                 email: address.email,
                 phone: cleanPhone,
-                address: addressLine,
+                address: addressLine.substring(0, 255),
                 city: address.city || 'Unknown',
                 state: address.state || 'Madhya Pradesh',
-                pincode: address.pincode || address.zip || '000000',
+                pincode: address.pincode || address.zip || '482002',
                 country: 'India'
             },
             pickup: {

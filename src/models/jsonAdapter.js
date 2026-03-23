@@ -234,5 +234,8 @@ module.exports = {
     ReturnRequest: JsonModel.createModel('return_requests.json'),
     OrderCancellation: JsonModel.createModel('order_cancellations.json'),
     BotLead: JsonModel.createModel('bot_leads.json'),
-    ChatConversation: JsonModel.createModel('chat_conversations.json')
+    ChatConversation: JsonModel.createModel('chat_conversations.json'),
+    Job: JsonModel.createModel('jobs.json'),
+    NotificationLog: JsonModel.createModel('notification_logs.json'),
+    SystemSettings: JsonModel.createModel('system_settings.json')
 };

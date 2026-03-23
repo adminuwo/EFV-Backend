@@ -185,7 +185,7 @@ router.post('/create', adminAuth, async (req, res) => {
         // Final fallback: if no street info, at least use city/state so it's not empty, 
         // but warn if essential parts are missing
         if (!addressLine || addressLine.length < 5) {
-            addressLine = `${city}, ${state}`.trim();
+            addressLine = addr.house || addr.street || addr.area || c.address || 'Address Details Missing';
         }
 
         // Validate mandatory fields BEFORE hitting Nimbus
@@ -210,7 +210,7 @@ router.post('/create', adminAuth, async (req, res) => {
                 name: (c.name || 'Customer').substring(0, 50),
                 email: c.email || '',
                 phone: phone,
-                address: addressLine.substring(0, 100),
+                address: addressLine.substring(0, 255),
                 city: city,
                 state: state,
                 pincode: pincode,

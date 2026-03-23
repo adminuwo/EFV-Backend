@@ -177,6 +177,7 @@ app.use('/api/auth', require('./routes/auth'));
 const productRoutes = require('./routes/products');
 app.use('/api/products', productRoutes);
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/cart', require('./routes/cart'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/library', require('./routes/library'));
 app.use('/api/progress', require('./routes/progress'));
@@ -259,6 +260,35 @@ nimbusPostService.login().then(() => {
 }).catch(err => {
     console.error("❌ Pre-emptive Nimbus Authentication Failed, will retry on use.");
 });
+
+// Start Background Notification Worker
+const notificationWorker = require('./services/notificationWorker');
+const { SystemSettings } = require('./models');
+
+// Initialize default settings if needed
+const seedSettings = async () => {
+    try {
+        const cartRecov = await SystemSettings.findOne({ key: 'whatsapp_cart_recovery' });
+        if (!cartRecov) {
+            await SystemSettings.create({ 
+                key: 'whatsapp_cart_recovery', 
+                value: true, 
+                description: 'Enable/Disable WhatsApp Abandoned Cart reminders' 
+            });
+        }
+        const orderJobs = await SystemSettings.findOne({ key: 'whatsapp_order_jobs' });
+        if (!orderJobs) {
+            await SystemSettings.create({ 
+                key: 'whatsapp_order_jobs', 
+                value: true, 
+                description: 'Enable/Disable Delayed Order confirmation messages' 
+            });
+        }
+    } catch (e) {}
+};
+seedSettings();
+
+notificationWorker.start(60); // Check every 60 seconds
 
 const PORT = process.env.PORT || 8080;
 // Removing '0.0.0.0' to let Node decide the best interface (usually binds all, which is required by Cloud Run)

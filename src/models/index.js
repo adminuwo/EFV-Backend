@@ -85,7 +85,7 @@ const productSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-// New Cart Schema
+// Enhanced Cart Schema for Recovery
 const cartSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     items: [{
@@ -93,6 +93,29 @@ const cartSchema = new mongoose.Schema({
         quantity: { type: Number, default: 1 },
         addedAt: { type: Date, default: Date.now }
     }],
+    lastSyncedAt: { type: Date, default: Date.now },
+    remindersSent: { type: Number, default: 0 },
+    lastReminderAt: { type: Date },
+    isPurchased: { type: Boolean, default: false } // Reset this when cart items are updated
+});
+
+// Notification Job Schema for Queue System
+const notificationJobSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    type: { type: String, enum: ['OrderPlaced', 'AbandonedCart'], required: true },
+    status: { type: String, enum: ['Pending', 'Completed', 'Failed'], default: 'Pending' },
+    scheduledFor: { type: Date, required: true },
+    data: { type: mongoose.Schema.Types.Mixed }, // Order ID, cart items, etc.
+    attempts: { type: Number, default: 0 },
+    error: String,
+    processedAt: Date,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const systemSettingsSchema = new mongoose.Schema({
+    key: { type: String, unique: true, required: true },
+    value: { type: mongoose.Schema.Types.Mixed },
+    description: String,
     updatedAt: { type: Date, default: Date.now }
 });
 
@@ -387,5 +410,7 @@ module.exports = {
     OrderCancellation: mongoose.model('OrderCancellation', orderCancellationSchema),
     BotLead: mongoose.model('BotLead', botLeadSchema),
     ChatConversation: mongoose.model('ChatConversation', chatConversationSchema),
+    NotificationJob: mongoose.model('NotificationJob', notificationJobSchema),
+    SystemSettings: mongoose.model('SystemSettings', systemSettingsSchema),
     NotificationLog: require('./NotificationLog')
 };
