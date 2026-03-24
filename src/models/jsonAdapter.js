@@ -15,11 +15,21 @@ class JsonModel {
             value: async function () {
                 const id = this._id || this.id;
                 // Create a plain object copy (avoids non-enumerable save interfering)
-                const plainCopy = JSON.parse(JSON.stringify(this));
+                // Use a try-catch to catch stringification errors (circular refs)
+                let plainCopy;
+                try {
+                    plainCopy = JSON.parse(JSON.stringify(this));
+                } catch (e) {
+                    console.error('❌ JSON DB Stringify Error (Circular?):', e.message);
+                    throw e;
+                }
+
                 if (id) {
-                    return dbInstance.update(id, plainCopy);
+                    const result = await dbInstance.update(id, plainCopy);
+                    if (result) Object.assign(this, result);
+                    return this;
                 } else {
-                    const created = dbInstance.create(plainCopy);
+                    const created = await dbInstance.create(plainCopy);
                     Object.assign(this, created);
                     return this;
                 }
@@ -28,6 +38,28 @@ class JsonModel {
             writable: true,
             configurable: true
         });
+
+        Object.defineProperty(obj, 'markModified', {
+            value: function (field) {
+                // In JSON DB mode, simple mutations work directly.
+                // This is a no-op to maintain Mongoose compatibility.
+                return;
+            },
+            enumerable: false,
+            writable: true,
+            configurable: true
+        });
+
+        Object.defineProperty(obj, 'toObject', {
+            value: function () {
+                // Return a clean clone of the instance data
+                return JSON.parse(JSON.stringify(this));
+            },
+            enumerable: false,
+            writable: true,
+            configurable: true
+        });
+
         return obj;
     }
 

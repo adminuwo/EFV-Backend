@@ -117,7 +117,22 @@ router.post('/login', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Login Error:', error);
+        console.error('CRITICAL: Login Error details:', {
+            message: error.message,
+            stack: error.stack,
+            email: req.body.email
+        });
+        
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const logPath = path.join(__dirname, '../data/auth_debug.log');
+            const logEntry = `[${new Date().toISOString()}] Login 500 for ${req.body.email}: ${error.message}\n${error.stack}\n\n`;
+            fs.appendFileSync(logPath, logEntry);
+        } catch (e) {
+            console.error('Failed to log login error to file:', e.message);
+        }
+
         res.status(500).json({ message: 'Internal server error during login' });
     }
 });
