@@ -1,21 +1,20 @@
-const { Partner, PartnerSale } = require('../models');
+const { PartnerSale } = require('../models');
 
 /**
- * Handles recording a sale for a partner when an order is successfully placed/verified.
+ * Process a sale linked to a partner
+ * Creates a PartnerSale record and performs any necessary updates
  */
 async function processPartnerSale(order, partnerRef) {
-    if (!partnerRef || !partnerRef.partnerId) {
-        console.warn(`⚠️ [PARTNER-SALE] Skipping: No partnerRef or partnerId for Order ${order.orderId}`);
-        return;
-    }
-
     try {
-        const partner = await Partner.findById(partnerRef.partnerId);
-        if (!partner) return;
+        if (!partnerRef || !partnerRef.partnerId) {
+            console.warn('⚠️ processPartnerSale called without valid partnerRef');
+            return null;
+        }
 
-        // 1. Create PartnerSale record (Detailed Tracking)
-        await PartnerSale.create({
-            partnerId: partner._id.toString(),
+        console.log(`💰 Processing Partner Sale record for Order: ${order.orderId}, Partner: ${partnerRef.partnerName}`);
+
+        const saleRecord = await PartnerSale.create({
+            partnerId: partnerRef.partnerId,
             orderId: order.orderId,
             customerName: order.customer.name,
             customerEmail: order.customer.email,
@@ -24,18 +23,16 @@ async function processPartnerSale(order, partnerRef) {
             couponCode: partnerRef.couponCode,
             commissionPercent: partnerRef.commissionPercent,
             commissionAmount: partnerRef.commissionAmount,
-            paymentStatus: 'Unpaid',
-            createdAt: new Date()
+            paymentStatus: order.paymentStatus === 'Paid' ? 'Unpaid' : 'Unpaid' // Usually wait for payout
         });
 
-        // 2. Update Partner Summary Totals
-        partner.totalCommissionEarned = (partner.totalCommissionEarned || 0) + partnerRef.commissionAmount;
-        await partner.save();
-
-        console.log(`📈 Partner Sale Recorded: ${partner.name} earned ₹${partnerRef.commissionAmount} from Order ${order.orderId}`);
-    } catch (err) {
-        console.error('Error processing partner sale logic:', err);
+        return saleRecord;
+    } catch (error) {
+        console.error('❌ Error processing partner sale:', error);
+        throw error;
     }
 }
 
-module.exports = { processPartnerSale };
+module.exports = {
+    processPartnerSale
+};

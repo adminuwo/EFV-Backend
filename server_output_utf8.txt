@@ -1,0 +1,8 @@
+﻿🚀 Server: Loading Version 1.3 (Active)... Port: 8080
+🚚 NimbusShipping.js Loaded
+ℹ️ Running in Local JSON Database Mode (No MongoDB required)
+--- DATABASE MODE CHECK ---
+USE_JSON_DB: true
+---------------------------
+DEBUG: JsonDB module content: [class JsonDB]
+DEBUG: JsonDB type: function

@@ -1,11 +1,10 @@
-const JsonDB = require('../utils/jsonDB');
-
 /**
  * Enhanced JSON Model Adapter to mimic Mongoose behavior.
  * Returns a Query-like object for chaining (.populate, .sort, etc.)
  */
 class JsonModel {
     static _attachSave(obj, dbInstance) {
+
         if (!obj) return null;
         if (Array.isArray(obj)) {
             return obj.map(item => JsonModel._attachSave(item, dbInstance));
@@ -64,6 +63,7 @@ class JsonModel {
     }
 
     static createModel(filename) {
+        const JsonDB = require('../utils/jsonDB');
         const db = new JsonDB(filename);
 
         class Query {

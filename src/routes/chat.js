@@ -398,9 +398,18 @@ async function preloadRAG() {
                 if (fileName.endsWith('.pdf')) {
                     const filePath = path.join(ragDir, fileName);
                     const buffer = fs.readFileSync(filePath);
-                    const data = await pdf(buffer);
-                    global.pdfContentCache[fileName] = data.text;
-                    combinedText += `\n[SOURCE: ${fileName}]\n${data.text}\n`;
+                    let data;
+                    if (typeof pdf === 'function' && !pdf.prototype?.parse) {
+                        data = await pdf(buffer);
+                    } else if (typeof pdf === 'function') {
+                        // Handle class-based PDFParse (v2.x)
+                        const instance = new pdf(buffer);
+                        data = await instance.parse();
+                    }
+                    if (data && data.text) {
+                        global.pdfContentCache[fileName] = data.text;
+                        combinedText += `\n[SOURCE: ${fileName}]\n${data.text}\n`;
+                    }
                 } else if (fileName.endsWith('.txt')) {
                     const content = fs.readFileSync(path.join(ragDir, fileName), 'utf8');
                     combinedText += `\n[SOURCE: ${fileName}]\n${content}\n`;
