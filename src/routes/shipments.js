@@ -29,6 +29,24 @@ router.get('/track/:awb', protect, async (req, res) => {
         }
 
         const trackingData = await nimbusPostService.trackShipment(awb);
+        
+        // Auto-sync status back to database if found
+        if (trackingData.status && trackingData.data && trackingData.data.status_name) {
+            const newStatus = trackingData.data.status_name;
+            const shipment = await Shipment.findOne({ awbNumber: awb });
+            if (shipment && shipment.shippingStatus !== newStatus) {
+                shipment.shippingStatus = newStatus;
+                await shipment.save();
+
+                const order = await Order.findOne({ orderId: shipment.orderId });
+                if (order && order.status !== newStatus) {
+                    order.status = newStatus;
+                    order.timeline.push({ status: newStatus, note: 'Auto-synced with NimbusPost (via AWB tracking)' });
+                    await order.save();
+                }
+            }
+        }
+
         res.json(trackingData);
     } catch (error) {
         console.error('Nimbus Tracking Route Error:', error.message);
@@ -106,6 +124,24 @@ router.get('/track-by-order/:orderId', protect, async (req, res) => {
             try {
                 const liveTracking = await nimbusPostService.trackShipment(awbNumber);
                 orderSummary.liveTracking = liveTracking;
+
+                // Auto-sync status back to database
+                if (liveTracking.status && liveTracking.data && liveTracking.data.status_name) {
+                    const newStatus = liveTracking.data.status_name;
+                    if (order.status !== newStatus) {
+                        console.log(`🔄 Syncing status for order ${order.orderId}: ${order.status} -> ${newStatus}`);
+                        order.status = newStatus;
+                        order.timeline.push({ status: newStatus, note: 'Auto-synced with NimbusPost' });
+                        await order.save();
+                        
+                        // Also update Shipment record
+                        const shipment = await Shipment.findOne({ orderId: order._id.toString() });
+                        if (shipment) {
+                            shipment.shippingStatus = newStatus;
+                            await shipment.save();
+                        }
+                    }
+                }
             } catch (trackErr) {
                 console.warn('Live tracking fetch failed:', trackErr.message);
                 orderSummary.liveTracking = { status: false, message: 'Live tracking temporarily unavailable' };

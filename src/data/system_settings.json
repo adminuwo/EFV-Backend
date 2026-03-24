@@ -1,0 +1,18 @@
+[
+  {
+    "key": "whatsapp_cart_recovery",
+    "value": true,
+    "description": "Enable/Disable WhatsApp Abandoned Cart reminders",
+    "_id": "mn4750n3ax9nrr6kkp",
+    "createdAt": "2026-03-24T05:50:59.967Z",
+    "updatedAt": "2026-03-24T05:50:59.967Z"
+  },
+  {
+    "key": "whatsapp_order_jobs",
+    "value": true,
+    "description": "Enable/Disable Delayed Order confirmation messages",
+    "_id": "mn4750n74kvuw43qg7p",
+    "createdAt": "2026-03-24T05:50:59.971Z",
+    "updatedAt": "2026-03-24T05:50:59.971Z"
+  }
+]

@@ -1,5 +1,6 @@
-const { Job, Cart, User, Product, SystemSettings } = require('../models');
+const { Job, Cart, User, Product, SystemSettings, Order, Shipment } = require('../models');
 const whatsappService = require('./whatsappService');
+const nimbusPostService = require('./nimbusPostService');
 
 /**
  * Background Worker for Processing Delayed Notifications
@@ -22,6 +23,9 @@ class NotificationWorker {
 
             // 2. Identify Abandoned Carts & Create Recovery Jobs
             await this.checkAbandonedCarts();
+
+            // 3. Automated Shipment Sync
+            await this.syncShipments();
         } catch (error) {
             console.error('❌ Worker Tick Error:', error);
         }
@@ -146,6 +150,51 @@ class NotificationWorker {
             await job.save();
         } catch (err) {
             console.error('Schedule Recovery Error:', err);
+        }
+    }
+
+    /**
+     * Automated Shipment Status Sync with NimbusPost
+     * Syncs any shipment that is NOT in a final state (Delivered, Cancelled, Returned)
+     */
+    async syncShipments() {
+        try {
+            // Only sync shipments that haven't reached final status
+            const activeShipments = await Shipment.find({
+                shippingStatus: { $nin: ['Delivered', 'Cancelled', 'Returned', 'Failed'] }
+            }).limit(5); // Process in small batches each tick to avoid rate limits
+
+            if (activeShipments.length === 0) return;
+
+            console.log(`🚚 Background Worker: Syncing ${activeShipments.length} active shipments...`);
+
+            for (const shipment of activeShipments) {
+                if (!shipment.awbNumber) continue;
+
+                try {
+                    const trackingData = await nimbusPostService.trackShipment(shipment.awbNumber);
+                    if (trackingData.status && trackingData.data && trackingData.data.status_name) {
+                        const newStatus = trackingData.data.status_name;
+                        
+                        if (shipment.shippingStatus !== newStatus) {
+                            console.log(`📦 Updating shipment ${shipment.orderId}: ${shipment.shippingStatus} -> ${newStatus}`);
+                            shipment.shippingStatus = newStatus;
+                            await shipment.save();
+
+                            const order = await Order.findOne({ orderId: shipment.orderId });
+                            if (order && order.status !== newStatus) {
+                                order.status = newStatus;
+                                order.timeline.push({ status: newStatus, note: 'Background Auto-sync with NimbusPost' });
+                                await order.save();
+                            }
+                        }
+                    }
+                } catch (shipErr) {
+                    console.error(`Error syncing shipment ${shipment.orderId}:`, shipErr.message);
+                }
+            }
+        } catch (err) {
+            console.error('Shipment Sync Worker Error:', err);
         }
     }
 }
