@@ -1716,7 +1716,7 @@ router.get('/:id/invoice', protect, async (req, res) => {
         if (!isAdmin && !isOwner) return res.status(403).json({ message: 'Unauthorized' });
 
         const PDFDocument = require('pdfkit');
-        const doc = new PDFDocument({ margin: 50 });
+        const doc = new PDFDocument({ margin: 50, autoFirstPage: true });
 
         // Stream PDF to Response
         const filename = `EFV_Invoice_${order.orderId}.pdf`;
@@ -1732,34 +1732,39 @@ router.get('/:id/invoice', protect, async (req, res) => {
         doc.rect(0, 0, doc.page.width, 100).fill(DARK);
         
         // Brand Logo
-        doc.fillColor(EFV_GOLD).font('Helvetica-Bold').fontSize(32).text('EFV™', 50, 30);
+        doc.fillColor(EFV_GOLD).font('Helvetica-Bold').fontSize(32).text('EFV', 50, 30);
         doc.fontSize(12).font('Helvetica').text('OFFICIAL TAX INVOICE', 50, 65);
         
-        // Order Info (Right Aligned in Header)
+        // Order Info (Right Aligned)
+        const dateStr = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
         doc.fillColor('#FFFFFF').fontSize(9);
-        doc.text(`Invoice No: INV-${order.orderId.split('-').pop()}`, 400, 30, { align: 'right' });
-        doc.text(`Order ID: #${order.orderId}`, 400, 45, { align: 'right' });
-        doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-GB')}`, 400, 60, { align: 'right' });
+        doc.text(`Invoice No: INV-${(order.orderId || '').split('-').pop()}`, 400, 30, { align: 'right' });
+        doc.text(`Order ID: #${order.orderId || 'N/A'}`, 400, 45, { align: 'right' });
+        doc.text(`Date: ${dateStr}`, 400, 60, { align: 'right' });
+        
+        // Customers Safety
+        const customer = order.customer || {};
+        const items = order.items || [];
 
         // --- MERCHANT & CUSTOMER DETAILS ---
         doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold').text('SOLD BY:', 50, 120);
         doc.font('Helvetica').fontSize(9)
-           .text('EFV™ - Educational Future Vision', 50, 135)
+           .text('EFV - Educational Future Vision', 50, 135)
            .text('Madhya Pradesh, India', 50, 150)
            .text('GSTIN: 23EFVPA0000Z1Z1', 50, 165)
            .text('Support: admin@uwo24.com', 50, 180);
 
         doc.font('Helvetica-Bold').text('BILL TO:', 350, 120);
         doc.font('Helvetica').fontSize(9)
-           .text(order.customer.name || 'Valued Customer', 350, 135)
-           .text(order.customer.city || '', 350, 150)
-           .text(`${order.customer.zip || ''}`, 350, 165)
-           .text(`Contact: ${order.customer.phone || 'N/A'}`, 350, 180);
+           .text(String(customer.name || 'Valued Customer'), 350, 135)
+           .text(String(customer.city || 'N/A'), 350, 150)
+           .text(String(customer.zip || ''), 350, 165)
+           .text(`Contact: ${customer.phone || 'N/A'}`, 350, 180);
 
         // --- ITEMS TABLE ---
         const tableTop = 230;
         doc.rect(50, tableTop, 500, 20).fill('#F5F5F5');
-        doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9)
+        doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8)
            .text('ITEM', 60, tableTop + 6)
            .text('QTY', 280, tableTop + 6)
            .text('PRICE', 350, tableTop + 6)
@@ -1767,13 +1772,16 @@ router.get('/:id/invoice', protect, async (req, res) => {
            .text('TOTAL', 490, tableTop + 6);
 
         let rowY = tableTop + 30;
-        order.items.forEach(item => {
-            doc.font('Helvetica').fillColor('#333333')
-               .text(item.title, 60, rowY, { width: 210 })
-               .text(item.quantity.toString(), 280, rowY)
-               .text(`INR ${item.price}`, 350, rowY)
+        items.forEach(item => {
+            const title = String(item.title || 'Product').substring(0, 40);
+            const qty = Number(item.quantity || 0);
+            const price = Number(item.price || 0);
+            doc.font('Helvetica').fillColor('#333333').fontSize(8)
+               .text(title, 60, rowY, { width: 210 })
+               .text(qty.toString(), 280, rowY)
+               .text(`INR ${price.toFixed(2)}`, 350, rowY)
                .text('18%', 420, rowY)
-               .text(`INR ${item.price * item.quantity}`, 490, rowY);
+               .text(`INR ${(price * qty).toFixed(2)}`, 490, rowY);
             rowY += 25;
         });
 
@@ -1782,11 +1790,11 @@ router.get('/:id/invoice', protect, async (req, res) => {
         doc.moveTo(350, rowY).lineTo(550, rowY).stroke('#EEEEEE');
         rowY += 15;
 
-        const subtotal = order.subtotal || order.items.reduce((s, i) => s + (i.price * i.quantity), 0);
-        const shipping = order.shippingCharges || 0;
-        const discount = order.discountAmount || 0;
-        const total    = order.totalAmount;
-        const tax      = order.taxAmount || (total - (total / 1.18));
+        const subtotal = Number(order.subtotal || items.reduce((s, i) => s + (Number(i.price || 0) * Number(i.quantity || 0)), 0));
+        const shipping = Number(order.shippingCharges || 0);
+        const discount = Number(order.discountAmount || 0);
+        const total    = Number(order.totalAmount || 0);
+        const tax      = Number(order.taxAmount || (total - (total / 1.18)));
 
         const renderRow = (label, value, isBold = false, isGlow = false) => {
             if (isGlow) {
@@ -1797,7 +1805,7 @@ router.get('/:id/invoice', protect, async (req, res) => {
             }
             doc.font(isBold ? 'Helvetica-Bold' : 'Helvetica').fontSize(isBold ? 11 : 9);
             doc.text(label, 350, rowY);
-            doc.text(`INR ${Number(value).toFixed(2)}`, 490, rowY, { align: 'right', width: 60 });
+            doc.text(`INR ${Number(value || 0).toFixed(2)}`, 490, rowY, { align: 'right', width: 60 });
             rowY += 20;
         };
 
@@ -1809,18 +1817,22 @@ router.get('/:id/invoice', protect, async (req, res) => {
         renderRow('GRAND TOTAL:', total, true, true);
 
         // Footer
-        doc.fillColor('#999999').fontSize(8).italic()
+        doc.fillColor('#999999').fontSize(8).font('Helvetica-Oblique')
            .text('Terms: This is a system-generated tax invoice. Digital products are non-refundable.', 50, 700, { align: 'center' });
         doc.fillColor(EFV_GOLD).font('Helvetica-Bold').fontSize(10)
-           .text('THANK YOU FOR SHOPPING AT EFV™', 50, 720, { align: 'center' });
+           .text('THANK YOU FOR SHOPPING AT EFV', 50, 720, { align: 'center' });
 
         doc.end();
 
     } catch (e) {
         console.error('Invoice Route Error:', e);
-        res.status(500).json({ message: 'Failed to generate invoice' });
+        if (!res.headersSent) {
+            res.status(500).json({ message: 'Failed to generate invoice' });
+        }
     }
 });
+
+module.exports = router;
 
 module.exports = router;
 
