@@ -940,6 +940,41 @@ router.get('/track/:id', async (req, res) => {
             }
         }
 
+        // Attempt to sync status from NimbusPost if AWB exists and order is not finalized
+        const activeStatuses = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Pending', 'Cancelled'];
+        if (orderObj.awbNumber && activeStatuses.includes(orderObj.status)) {
+            try {
+                const nimbusPostService = require('../services/nimbusPostService');
+                const tracking = await nimbusPostService.trackShipment(orderObj.awbNumber);
+                if (tracking && tracking.status) {
+                    const nStatusRaw = tracking.data?.status_name || tracking.data?.status || tracking.data?.history?.[0]?.status_name || '';
+                    const nStatus = nStatusRaw.toLowerCase();
+                    
+                    let newStatus = null;
+                    if (nStatus.includes('cancel')) newStatus = 'Cancelled';
+                    else if (nStatus.includes('deliver')) newStatus = 'Delivered';
+                    else if (nStatus.includes('return') || nStatus.includes('rtv') || nStatus.includes('rto')) newStatus = 'Returned';
+                    else if (nStatus.includes('pick') || nStatus.includes('transit') || nStatus.includes('shipped') || nStatus.includes('dispatch') || nStatus.includes('hub')) newStatus = 'Shipped';
+                    else if (nStatus.includes('process') || nStatus.includes('pack')) newStatus = 'Processing';
+
+                    if (newStatus && newStatus !== orderObj.status) {
+                        console.log(`🔄 Track Sync: Order ${orderObj.orderId} status ${orderObj.status} -> ${newStatus}`);
+                        orderObj.status = newStatus; // Update POJO for response
+                        // Also update the actual order in DB
+                        order.status = newStatus;
+                        order.timeline.push({ 
+                            status: newStatus, 
+                            note: `Status synced from NimbusPost during track (${nStatus})`,
+                            timestamp: new Date()
+                        });
+                        await order.save();
+                    }
+                }
+            } catch (syncErr) {
+                console.warn(`⚠️ Track sync failed for ${orderObj.orderId}:`, syncErr.message);
+            }
+        }
+
         res.json(orderObj);
     } catch (error) {
         console.error('Track Error:', error);
