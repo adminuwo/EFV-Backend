@@ -302,6 +302,7 @@ async function trackShipment(awb) {
         const response = await axios.get(`${NIMBUS_BASE_URL}/shipments/track/${awb}`, {
             headers: { 'Authorization': `Bearer ${cachedToken}` }
         });
+        await logNimbus('TRACK_RESPONSE', response.data);
         return response.data;
     } catch (error) {
         if (error.response?.status === 401) {

@@ -1171,13 +1171,16 @@ router.get('/sync-all', protect, async (req, res) => {
                     const tracking = await nimbusPostService.trackShipment(order.awbNumber);
                     if (tracking && tracking.status) {
                         // Nimbus status mapping
-                        const nStatus = (tracking.data?.history?.[0]?.status_name || tracking.data?.status || '').toLowerCase();
+                        // Use top-level status_name if available, fallback to status, then history[0]
+                        const nStatusRaw = tracking.data?.status_name || tracking.data?.status || tracking.data?.history?.[0]?.status_name || '';
+                        const nStatus = nStatusRaw.toLowerCase();
                         
                         let newStatus = null;
                         if (nStatus.includes('cancel')) newStatus = 'Cancelled';
                         else if (nStatus.includes('deliver')) newStatus = 'Delivered';
-                        else if (nStatus.includes('return')) newStatus = 'Returned';
-                        else if (nStatus.includes('pick') || nStatus.includes('transit') || nStatus.includes('shipped')) newStatus = 'Shipped';
+                        else if (nStatus.includes('return') || nStatus.includes('rtv') || nStatus.includes('rto')) newStatus = 'Returned';
+                        else if (nStatus.includes('pick') || nStatus.includes('transit') || nStatus.includes('shipped') || nStatus.includes('dispatch') || nStatus.includes('hub')) newStatus = 'Shipped';
+                        else if (nStatus.includes('process') || nStatus.includes('pack')) newStatus = 'Processing';
 
                         if (newStatus && newStatus !== order.status) {
                             console.log(`🔄 Sync: Order ${order.orderId} status ${order.status} -> ${newStatus}`);
@@ -1498,7 +1501,9 @@ router.post('/verify-razorpay', protect, async (req, res) => {
 
         const sCharge = Number(shippingCharge) || 0;
         const cCharge = Number(codCharge)      || 0;
-        const finalPayable    = Math.round(totalAmount - discountAmount + sCharge + cCharge);
+        
+        // TRUST THE PAYMENT GATEWAY: The amount the user actually paid
+        const actualPaidAmount = Math.round(payment.amount / 100); 
         const isPurelyDigital = orderItems.every(i => i.type === 'EBOOK' || i.type === 'AUDIOBOOK');
 
         // 6. Create Order record
@@ -1514,7 +1519,7 @@ router.post('/verify-razorpay', protect, async (req, res) => {
                 zip    : address.pincode  || ''
             },
             items           : orderItems,
-            totalAmount     : finalPayable,
+            totalAmount     : actualPaidAmount,
             shippingCharges : sCharge,
             codCharges      : cCharge,
             discountAmount  : Math.round(discountAmount),
