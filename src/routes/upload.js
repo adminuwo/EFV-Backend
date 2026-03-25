@@ -129,16 +129,24 @@ router.post('/chunked', adminAuth, upload.single('chunk'), async (req, res) => {
             const finalSafeName = `${fieldname}-${uniqueSuffix}-${safeName}`;
             const finalPath = path.join('/tmp', finalSafeName);
             
-            const writeStream = fs.createWriteStream(finalPath);
+            // Assemble using a more memory-efficient append strategy
+            if (fs.existsSync(finalPath)) fs.unlinkSync(finalPath);
+            
+            console.log(`🔌 [Chunked] Assembling ${totalChunks} chunks into ${finalPath}...`);
             for (let i = 0; i < parseInt(totalChunks); i++) {
                 const cPath = path.join(tempDir, `chunk_${i}`);
-                if (fs.existsSync(cPath)) writeStream.write(fs.readFileSync(cPath));
+                if (fs.existsSync(cPath)) {
+                    fs.appendFileSync(finalPath, fs.readFileSync(cPath));
+                    // DELETE CHUNK IMMEDIATELY to save memory space in /tmp (which is RAM on Cloud Run)
+                    fs.unlinkSync(cPath);
+                }
             }
-            writeStream.end();
-            await new Promise(resolve => writeStream.on('finish', resolve));
 
-            // Clean up chunks
-            fs.rmSync(tempDir, { recursive: true, force: true });
+            // Cleanup the empty dir
+            if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
+            
+            const stats = fs.statSync(finalPath);
+            console.log(`✅ [Chunked] Assembly Complete. Final Size: ${Math.round(stats.size/1024/1024)}MB`);
 
             // Upload to final place
             let storagePath = '';
