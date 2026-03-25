@@ -1790,6 +1790,7 @@ router.get('/:id/invoice', protect, async (req, res) => {
         doc.moveTo(350, rowY).lineTo(550, rowY).stroke('#EEEEEE');
         rowY += 15;
 
+        const codCharges = Number(order.codCharges || 0);
         const subtotal = Number(order.subtotal || items.reduce((s, i) => s + (Number(i.price || 0) * Number(i.quantity || 0)), 0));
         const shipping = Number(order.shippingCharges || 0);
         const discount = Number(order.discountAmount || 0);
@@ -1809,9 +1810,15 @@ router.get('/:id/invoice', protect, async (req, res) => {
             rowY += 20;
         };
 
-        renderRow('Items Total:', subtotal);
+        renderRow('Book Price:', subtotal);
         if (shipping > 0) renderRow('Shipping:', shipping);
-        if (discount > 0) renderRow('Discount:', -discount);
+        if (codCharges > 0) renderRow('COD Charges:', codCharges);
+        
+        if (discount > 0) {
+            const discLabel = order.couponCode ? `Discount (Coupon: ${order.couponCode}):` : 'Discount:';
+            renderRow(discLabel, -discount);
+        }
+        
         renderRow('GST (18%):', tax);
         rowY += 10;
         renderRow('GRAND TOTAL:', total, true, true);
