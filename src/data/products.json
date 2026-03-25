@@ -52,7 +52,7 @@
     "stock": 9999,
     "volume": "1",
     "language": "English",
-    "filePath": "uploads/ebooks/ebook-1772357551801-955767933-efv_canon_volume_1___the_origin_code____final__28.02.26__colour.pdf",
+    "filePath": "src/uploads/ebooks/ebook-1774421988784-900261396-efv_invoice_69bd30f6a5cbe4ee109baf5c.pdf",
     "author": "",
     "discountPrice": null,
     "weight": 0,
@@ -60,7 +60,7 @@
     "breadth": 0,
     "height": 0,
     "duration": "",
-    "updatedAt": "2026-03-01T09:32:31.918Z"
+    "updatedAt": "2026-03-25T06:59:49.726Z"
   },
   {
     "_id": "efv_v1_audiobook",

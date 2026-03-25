@@ -121,7 +121,7 @@ const systemSettingsSchema = new mongoose.Schema({
 
 // New Digital Library Schema
 const digitalLibrarySchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose.Schema.Types.Mixed, ref: 'User', required: true },
     items: [{
         productId: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
         title: String,

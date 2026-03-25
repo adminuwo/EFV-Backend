@@ -4,103 +4,127 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { User, Purchase, Product, UserProgress, DigitalLibrary } = require('../models');
 
-// Helper to get a consistent ObjectId for userId
+// Helper to get a consistent identifier for userId (supports both ObjectId and custom Strings)
 function getUserObjId(user) {
-    if (!user || (!user._id && !user.id)) return null;
+    if (!user) return null;
     const id = user._id || user.id;
+    if (!id) return null;
     
-    // If it's already a valid ObjectId instance, return it
-    if (mongoose.Types.ObjectId.isValid(id) && typeof id === 'object' && id.toString() === id.toHexString()) return id;
-    
-    // Try converting from string if valid hex, else just use the string (for Mixed type fields)
+    // If it's a valid 24-hex ObjectId, return it as one
     if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) {
         return new mongoose.Types.ObjectId(id);
     }
-    return id; // Return as is (string) if not a hex ID
+    
+    // Fallback: return as-is (e.g. for custom IDs like 'admin-efv-001')
+    return id.toString();
 }
 
 
 // Get user's digital library
-router.get('/test-ping', (req, res) => res.json({ message: 'Library Route v1.4 is ACTIVE', timestamp: new Date() }));
+router.get('/test-ping', (req, res) => res.json({ message: 'Library Route v1.5 is ACTIVE', timestamp: new Date() }));
 
 router.get('/my-library', protect, async (req, res) => {
     try {
-        const userObjId = getUserObjId(req.user);
-        let libraryData = await DigitalLibrary.findOne({ 
-            $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
-        });
-        let rawItems = libraryData ? (libraryData.items || []) : [];
+        const userEmail = (req.user.email || '').toLowerCase().trim();
+        const isAdmin = req.user.role === 'admin' || userEmail === 'admin@uwo24.com';
+        
+        console.log(`🔍 [LIBRARY GET] Fetching for user: ${userEmail} | FullAccess: ${isAdmin}`);
 
-        // Helper to sync an item with latest product data
-        const syncItemWithProduct = async (item) => {
-            try {
-                const productId = (item.productId || item._id || item.id || '').toString();
-                let product = null;
+        let results = [];
 
-                // Try finding by ID first
-                if (productId && mongoose.Types.ObjectId.isValid(productId)) {
-                    product = await Product.findById(productId);
-                }
+        if (isAdmin) {
+            // --- FULL ACCESS FOR ADMINS ---
+            // Automatically fetch all digital products from the database
+            const allProducts = await Product.find({ 
+                type: { $in: [/EBOOK/i, /AUDIOBOOK/i] }
+            });
+            
+            console.log(`📚 [LIBRARY ADMIN] Granting full access to ${allProducts.length} marketplace products`);
+            
+            results = allProducts.map(product => ({
+                productId: product._id.toString(),
+                title: product.title,
+                type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                thumbnail: product.thumbnail,
+                filePath: product.filePath,
+                purchasedAt: product.createdAt || new Date(),
+                progress: 0,
+                language: product.language || '',
+                isFullAccessAdmin: true
+            }));
+        } else {
+            // --- REGULAR USER LIBRARY ---
+            const userObjId = getUserObjId(req.user);
+            let libraryData = await DigitalLibrary.findOne({ 
+                $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
+            });
+            
+            let rawItems = libraryData ? (libraryData.items || []) : [];
+            console.log(`📦 [LIBRARY USER] Found ${rawItems.length} raw items in DB for ${userEmail}`);
 
-                if (!product && productId) {
-                   // Try searching by legacyId if not a valid ObjectId or not found
-                   product = await Product.findOne({
-                       $or: [{ _id: productId }, { legacyId: productId }]
-                   });
-                }
+            // Helper to sync an item with latest product data
+            const syncItemWithProduct = async (item) => {
+                try {
+                    const searchId = (item.productId || item._id || item.id || '').toString();
+                    if (!searchId) return null;
 
-                // Fallback: Fuzzy matching by title
-                if (!product) {
-                    const searchTitle = (item.title || item.name || '').replace(/\(.*\)/, '').trim();
-                    const productType = (item.type || '').toUpperCase()
-                        .replace('E-BOOK', 'EBOOK').replace('AUDIOBOOK', 'AUDIOBOOK');
+                    let product = await Product.findOne({
+                        $or: [{ _id: searchId }, { legacyId: searchId }]
+                    });
 
-                    if (searchTitle) {
-                        product = await Product.findOne({
-                            title: new RegExp(searchTitle.replace(/[™®]/g, '').trim(), 'i'),
-                            type: productType
-                        });
+                    if (!product) {
+                        const searchTitle = (item.title || item.name || '').replace(/\(.*\)/, '').trim();
+                        if (searchTitle) {
+                            product = await Product.findOne({
+                                title: new RegExp(searchTitle.replace(/[™®]/g, '').trim(), 'i')
+                            });
+                        }
                     }
-                }
 
-                if (product) {
+                    if (product) {
+                        return {
+                            productId: product._id.toString(),
+                            title: product.title,
+                            type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                            thumbnail: product.thumbnail || item.thumbnail,
+                            filePath: product.filePath || item.filePath,
+                            purchasedAt: item.purchasedAt || item.createdAt || new Date(),
+                            progress: item.progress || 0,
+                            language: product.language || item.language || ''
+                        };
+                    }
+                    
                     return {
-                        productId: product._id,
-                        title: product.title,
-                        type: product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
-                        thumbnail: product.thumbnail || item.thumbnail,
-                        filePath: product.filePath || item.filePath,
-                        purchasedAt: item.purchasedAt || item.createdAt || new Date(),
-                        progress: item.progress || 0
+                        ...item.toObject ? item.toObject() : item,
+                        productId: searchId,
+                        purchasedAt: item.purchasedAt || item.createdAt || new Date()
                     };
+                } catch (err) {
+                    console.error(`❌ [LIBRARY USER] Error syncing ${item.title}:`, err);
+                    return item;
                 }
-                return item;
-            } catch (err) {
-                console.error('Library Item Sync Error:', err);
-                return item;
-            }
-        };
+            };
 
-        // Use a Map to deduplicate by productId
+            results = await Promise.all(rawItems.map(syncItemWithProduct));
+        }
+
+        // Final deduplication and sorting
         const libraryMap = new Map();
-
-        for (const item of rawItems) {
-            const synced = await syncItemWithProduct(item);
-            const id = synced.productId?.toString();
-
-            if (id && !libraryMap.has(id)) {
-                libraryMap.set(id, synced);
+        for (const item of results) {
+            if (!item) continue;
+            const key = (item.productId || '').toString();
+            if (key && !libraryMap.has(key)) {
+                libraryMap.set(key, item);
             }
         }
 
-        let library = Array.from(libraryMap.values());
-
-        // Sort by purchasedAt descending (Latest First)
+        const library = Array.from(libraryMap.values());
         library.sort((a, b) => new Date(b.purchasedAt || 0) - new Date(a.purchasedAt || 0));
 
+        console.log(`✅ [LIBRARY GET] Success. Returning ${library.length} items to ${userEmail}`);
         res.json(library);
     } catch (error) {
-        console.error('Error fetching library:', error);
+        console.error('❌ [LIBRARY GET] Global Error:', error);
         res.status(500).json({ message: 'Error fetching library' });
     }
 });
@@ -141,44 +165,52 @@ router.get('/progress/:productId', protect, async (req, res) => {
 
 // Add product to user's library (Manual/Instant Fulfillment)
 router.post('/add', protect, async (req, res) => {
-    console.log(`📥 [LIBRARY ADD] Request:`, req.body);
     try {
         const { productId } = req.body;
         const userId = req.user._id;
+        const userEmail = req.user.email;
+        
+        console.log(`📥 [LIBRARY ADD] User: ${userEmail} | Product: ${productId}`);
 
         let product = null;
 
-        // 1. Try finding by ID first
-        if (productId && typeof productId === 'string' && /^[0-9a-fA-F]{24}$/.test(productId)) {
+        // 1. Resolve product
+        if (productId && /^[0-9a-fA-F]{24}$/.test(productId.toString())) {
             product = await Product.findById(productId);
-        } else if (productId) {
-            product = await Product.findOne({ _id: productId });
         }
-
-        // 2. Fallback: Fuzzy matching by title
-        if (!product) {
-            const demoMap = {
-                'efv_v1_ebook': { title: /^EFV™ VOL 1: ORIGIN CODE™$/i, type: 'EBOOK' },
-                'efv_v1_audiobook': { title: /^EFV™ VOL 1: ORIGIN CODE™$/i, type: 'AUDIOBOOK' },
-                'efv_v1_ebook_en': { title: /THE ORIGIN CODE/i, type: 'EBOOK' },
-                'efv_v1_audiobook_en': { title: /THE ORIGIN CODE/i, type: 'AUDIOBOOK' },
-                'efv_v2_ebook': { title: /MINDOS/i, type: 'EBOOK' },
-                'efv_v2_audiobook': { title: /MINDOS/i, type: 'AUDIOBOOK' }
-            };
-
-            const demoSpec = demoMap[productId];
-            if (demoSpec) {
-                product = await Product.findOne({ title: demoSpec.title, type: demoSpec.type });
-            }
+        
+        if (!product && productId) {
+            product = await Product.findOne({
+                $or: [{ _id: productId }, { legacyId: productId.toString() }]
+            });
         }
 
         if (!product) {
-            return res.status(404).json({ success: false, message: `Product not found.`, receivedId: productId });
+            console.warn(`❌ [LIBRARY ADD] Product Not Found: ${productId}`);
+            return res.status(404).json({ success: false, message: `Product not found.` });
         }
 
+        // 2. Resolve user library
         const userObjId = getUserObjId(req.user);
         if (!userObjId) return res.status(401).json({ success: false, message: 'User session invalid' });
 
+        let library = await DigitalLibrary.findOne({
+            $or: [{ userId: userObjId }, { userId: userObjId.toString() }]
+        });
+
+        if (!library) {
+            console.log(`🏠 [LIBRARY ADD] Creating new library for user: ${userEmail}`);
+            library = new DigitalLibrary({ userId: userObjId, items: [] });
+        }
+
+        // 3. Deduplicate - remove item if it already exists with same productId
+        const pidStr = product._id.toString();
+        library.items = library.items.filter(item => 
+            (item.productId || '').toString() !== pidStr && 
+            (item.id || '').toString() !== pidStr
+        );
+
+        // 4. Create new library item
         const libraryItem = {
             productId: product._id,
             title: product.title,
@@ -189,25 +221,14 @@ router.post('/add', protect, async (req, res) => {
             accessStatus: 'active'
         };
 
-        const result = await DigitalLibrary.findOneAndUpdate(
-            { $or: [{ userId: userObjId }, { userId: userObjId.toString() }] },
-            { 
-                $setOnInsert: { userId: userObjId },
-                $pull: { items: { productId: product._id } } 
-            },
-            { upsert: true, new: true }
-        );
+        library.items.push(libraryItem);
+        await library.save();
 
-        await DigitalLibrary.findOneAndUpdate(
-            { _id: result._id },
-            { $push: { items: libraryItem } },
-            { new: true }
-        );
-
+        console.log(`✅ [LIBRARY ADD] Successfully added "${product.title}" to ${userEmail}'s library`);
         res.status(201).json({ success: true, message: 'Product added to library successfully' });
     } catch (error) {
-        console.error('Error adding to library:', error);
-        res.status(500).json({ success: false, message: 'Error adding to library', error: error.message });
+        console.error('❌ [LIBRARY ADD] Error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error while adding to library', error: error.message });
     }
 });
 

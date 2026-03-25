@@ -28,5 +28,2038 @@
     "_id": "mmenqdg4wgs45erqzr",
     "createdAt": "2026-03-06T08:53:29.620Z",
     "updatedAt": "2026-03-06T08:53:29.620Z"
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744215190006jfnsv2xj",
+    "createdAt": "2026-03-25T06:51:59.000Z",
+    "updatedAt": "2026-03-25T06:51:59.017Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:51:58.995Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "177442152144847ijo0lkj",
+    "createdAt": "2026-03-25T06:52:01.448Z",
+    "updatedAt": "2026-03-25T06:52:01.450Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T06:52:01.447Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774421522202ozr8av0a7",
+    "createdAt": "2026-03-25T06:52:02.202Z",
+    "updatedAt": "2026-03-25T06:52:02.208Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:52:02.201Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774421534875lc1awnlku",
+    "createdAt": "2026-03-25T06:52:14.875Z",
+    "updatedAt": "2026-03-25T06:52:14.878Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:52:14.874Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "177442153563110f0gh9gl",
+    "createdAt": "2026-03-25T06:52:15.631Z",
+    "updatedAt": "2026-03-25T06:52:15.638Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T06:52:15.629Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774421551131neq3oesfp",
+    "createdAt": "2026-03-25T06:52:31.131Z",
+    "updatedAt": "2026-03-25T06:52:31.134Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:52:31.128Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "17744215529184rmv6n3t3",
+    "createdAt": "2026-03-25T06:52:32.918Z",
+    "updatedAt": "2026-03-25T06:52:32.922Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T06:52:32.910Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744215600568w8wgirdx",
+    "createdAt": "2026-03-25T06:52:40.056Z",
+    "updatedAt": "2026-03-25T06:52:40.060Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:52:40.054Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774421560665pknfobnu7",
+    "createdAt": "2026-03-25T06:52:40.665Z",
+    "updatedAt": "2026-03-25T06:52:40.670Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T06:52:40.662Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744219574903vz6bla4u",
+    "createdAt": "2026-03-25T06:59:17.490Z",
+    "updatedAt": "2026-03-25T06:59:17.504Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:59:17.487Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "177442195897320h2gnk3d",
+    "createdAt": "2026-03-25T06:59:18.973Z",
+    "updatedAt": "2026-03-25T06:59:18.982Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:59:18.968Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774421996819qpx36nsul",
+    "createdAt": "2026-03-25T06:59:56.819Z",
+    "updatedAt": "2026-03-25T06:59:56.834Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T06:59:56.817Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774421997432c3g7xyqd2",
+    "createdAt": "2026-03-25T06:59:57.432Z",
+    "updatedAt": "2026-03-25T06:59:57.442Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T06:59:57.428Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_ebook_en"
+      }
+    },
+    "_id": "1774421998336152h7fpmn",
+    "createdAt": "2026-03-25T06:59:58.336Z",
+    "updatedAt": "2026-03-25T06:59:58.347Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_ebook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "E-Book",
+        "thumbnail": "img/english_v1.jpeg",
+        "filePath": "uploads/ebooks/ebook-1772357563351-660406593-efv__hindi_manuscript_volume_1__1_.pdf",
+        "purchasedAt": "2026-03-25T06:59:58.334Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_ebook"
+      }
+    },
+    "_id": "1774421998981sv12hsfxt",
+    "createdAt": "2026-03-25T06:59:58.981Z",
+    "updatedAt": "2026-03-25T06:59:58.993Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_ebook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "E-Book",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411240159-635425919.pdf",
+        "purchasedAt": "2026-03-25T06:59:58.978Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_audiobook"
+      }
+    },
+    "_id": "17744219999710lloizxks",
+    "createdAt": "2026-03-25T06:59:59.971Z",
+    "updatedAt": "2026-03-25T06:59:59.984Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_audiobook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
+        "purchasedAt": "2026-03-25T06:59:59.966Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422008035sizgrxzs4",
+    "createdAt": "2026-03-25T07:00:08.035Z",
+    "updatedAt": "2026-03-25T07:00:08.040Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:08.031Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774422008565zth13hret",
+    "createdAt": "2026-03-25T07:00:08.565Z",
+    "updatedAt": "2026-03-25T07:00:08.571Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:00:08.563Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774422009485wmir03fms",
+    "createdAt": "2026-03-25T07:00:09.485Z",
+    "updatedAt": "2026-03-25T07:00:09.492Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:00:09.481Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744220117095q8o471kk",
+    "createdAt": "2026-03-25T07:00:11.709Z",
+    "updatedAt": "2026-03-25T07:00:11.712Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:11.705Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744220118798usy7c2el",
+    "createdAt": "2026-03-25T07:00:11.879Z",
+    "updatedAt": "2026-03-25T07:00:11.892Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:11.877Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422012170nurqu7xi0",
+    "createdAt": "2026-03-25T07:00:12.170Z",
+    "updatedAt": "2026-03-25T07:00:12.181Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:12.169Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422012451x3pb1jw9i",
+    "createdAt": "2026-03-25T07:00:12.451Z",
+    "updatedAt": "2026-03-25T07:00:12.459Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:12.449Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744220126159zhovssk1",
+    "createdAt": "2026-03-25T07:00:12.615Z",
+    "updatedAt": "2026-03-25T07:00:12.617Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:12.612Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422012777rwmg63xtf",
+    "createdAt": "2026-03-25T07:00:12.777Z",
+    "updatedAt": "2026-03-25T07:00:12.781Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:12.776Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422012914hgjw65ruf",
+    "createdAt": "2026-03-25T07:00:12.914Z",
+    "updatedAt": "2026-03-25T07:00:12.922Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:12.913Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422013087ls43scd1s",
+    "createdAt": "2026-03-25T07:00:13.087Z",
+    "updatedAt": "2026-03-25T07:00:13.096Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:13.086Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422013246grnz3y7tp",
+    "createdAt": "2026-03-25T07:00:13.246Z",
+    "updatedAt": "2026-03-25T07:00:13.248Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:13.245Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744220134315mm4ism98",
+    "createdAt": "2026-03-25T07:00:13.431Z",
+    "updatedAt": "2026-03-25T07:00:13.435Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:13.427Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422013611f6tjxz22e",
+    "createdAt": "2026-03-25T07:00:13.611Z",
+    "updatedAt": "2026-03-25T07:00:13.617Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:13.608Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422013826rx80gptpp",
+    "createdAt": "2026-03-25T07:00:13.826Z",
+    "updatedAt": "2026-03-25T07:00:13.829Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:13.819Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744220140004hkmx1m0g",
+    "createdAt": "2026-03-25T07:00:14.000Z",
+    "updatedAt": "2026-03-25T07:00:14.002Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:13.998Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422014121mcn4mhjpo",
+    "createdAt": "2026-03-25T07:00:14.121Z",
+    "updatedAt": "2026-03-25T07:00:14.128Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:14.120Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744220142770g09i03z4",
+    "createdAt": "2026-03-25T07:00:14.278Z",
+    "updatedAt": "2026-03-25T07:00:14.281Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:14.276Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422014429ihb3iv2u3",
+    "createdAt": "2026-03-25T07:00:14.429Z",
+    "updatedAt": "2026-03-25T07:00:14.432Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:14.428Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422014725fbfcmc7yj",
+    "createdAt": "2026-03-25T07:00:14.725Z",
+    "updatedAt": "2026-03-25T07:00:14.728Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:14.723Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744220171534whvy8eev",
+    "createdAt": "2026-03-25T07:00:17.153Z",
+    "updatedAt": "2026-03-25T07:00:17.158Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:00:17.147Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "17744222270710d5jhjm1n",
+    "createdAt": "2026-03-25T07:03:47.071Z",
+    "updatedAt": "2026-03-25T07:03:47.074Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:03:47.066Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "17744222277130u3pmr48j",
+    "createdAt": "2026-03-25T07:03:47.713Z",
+    "updatedAt": "2026-03-25T07:03:47.727Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:03:47.705Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_ebook_en"
+      }
+    },
+    "_id": "17744222289368ryxpgy6r",
+    "createdAt": "2026-03-25T07:03:48.936Z",
+    "updatedAt": "2026-03-25T07:03:48.938Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_ebook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "E-Book",
+        "thumbnail": "img/english_v1.jpeg",
+        "filePath": "uploads/ebooks/ebook-1772357563351-660406593-efv__hindi_manuscript_volume_1__1_.pdf",
+        "purchasedAt": "2026-03-25T07:03:48.933Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_ebook_en"
+      }
+    },
+    "_id": "1774422229044z8629o63t",
+    "createdAt": "2026-03-25T07:03:49.044Z",
+    "updatedAt": "2026-03-25T07:03:49.046Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_ebook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "E-Book",
+        "thumbnail": "img/english_v1.jpeg",
+        "filePath": "uploads/ebooks/ebook-1772357563351-660406593-efv__hindi_manuscript_volume_1__1_.pdf",
+        "purchasedAt": "2026-03-25T07:03:49.039Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_ebook_en"
+      }
+    },
+    "_id": "17744222291737k6v99m3p",
+    "createdAt": "2026-03-25T07:03:49.173Z",
+    "updatedAt": "2026-03-25T07:03:49.185Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_ebook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "E-Book",
+        "thumbnail": "img/english_v1.jpeg",
+        "filePath": "uploads/ebooks/ebook-1772357563351-660406593-efv__hindi_manuscript_volume_1__1_.pdf",
+        "purchasedAt": "2026-03-25T07:03:49.172Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_ebook"
+      }
+    },
+    "_id": "17744222296141n3ixsx4i",
+    "createdAt": "2026-03-25T07:03:49.614Z",
+    "updatedAt": "2026-03-25T07:03:49.618Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_ebook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "E-Book",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411240159-635425919.pdf",
+        "purchasedAt": "2026-03-25T07:03:49.613Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_ebook"
+      }
+    },
+    "_id": "1774422229780f8gik8cx3",
+    "createdAt": "2026-03-25T07:03:49.780Z",
+    "updatedAt": "2026-03-25T07:03:49.784Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_ebook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "E-Book",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411240159-635425919.pdf",
+        "purchasedAt": "2026-03-25T07:03:49.779Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_ebook"
+      }
+    },
+    "_id": "17744222299294tx09umq9",
+    "createdAt": "2026-03-25T07:03:49.929Z",
+    "updatedAt": "2026-03-25T07:03:49.933Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_ebook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "E-Book",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411240159-635425919.pdf",
+        "purchasedAt": "2026-03-25T07:03:49.917Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_audiobook"
+      }
+    },
+    "_id": "1774422230479y5vzwsq8a",
+    "createdAt": "2026-03-25T07:03:50.479Z",
+    "updatedAt": "2026-03-25T07:03:50.485Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_audiobook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
+        "purchasedAt": "2026-03-25T07:03:50.476Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_audiobook"
+      }
+    },
+    "_id": "17744222306315jgurff27",
+    "createdAt": "2026-03-25T07:03:50.631Z",
+    "updatedAt": "2026-03-25T07:03:50.639Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_audiobook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
+        "purchasedAt": "2026-03-25T07:03:50.629Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774422231998icmo4od88",
+    "createdAt": "2026-03-25T07:03:51.998Z",
+    "updatedAt": "2026-03-25T07:03:52.006Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:03:51.996Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774422232336092zelhdc",
+    "createdAt": "2026-03-25T07:03:52.336Z",
+    "updatedAt": "2026-03-25T07:03:52.339Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:03:52.332Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422741991zj36s22w3",
+    "createdAt": "2026-03-25T07:12:21.991Z",
+    "updatedAt": "2026-03-25T07:12:22.006Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:12:21.990Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422750106bzeax0pf8",
+    "createdAt": "2026-03-25T07:12:30.106Z",
+    "updatedAt": "2026-03-25T07:12:30.113Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:12:30.103Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_ebook_en"
+      }
+    },
+    "_id": "1774422750767fcfduojjo",
+    "createdAt": "2026-03-25T07:12:30.767Z",
+    "updatedAt": "2026-03-25T07:12:30.771Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_ebook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "E-Book",
+        "thumbnail": "img/english_v1.jpeg",
+        "filePath": "uploads/ebooks/ebook-1772357563351-660406593-efv__hindi_manuscript_volume_1__1_.pdf",
+        "purchasedAt": "2026-03-25T07:12:30.758Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422808630mowm0inxx",
+    "createdAt": "2026-03-25T07:13:28.630Z",
+    "updatedAt": "2026-03-25T07:13:28.634Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:13:28.620Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "177442280991381xn73by3",
+    "createdAt": "2026-03-25T07:13:29.913Z",
+    "updatedAt": "2026-03-25T07:13:29.918Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:13:29.909Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_audiobook"
+      }
+    },
+    "_id": "1774422811352vvj4oaw6w",
+    "createdAt": "2026-03-25T07:13:31.352Z",
+    "updatedAt": "2026-03-25T07:13:31.361Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_audiobook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
+        "purchasedAt": "2026-03-25T07:13:31.348Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422817402f60vh60av",
+    "createdAt": "2026-03-25T07:13:37.402Z",
+    "updatedAt": "2026-03-25T07:13:37.411Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:13:37.400Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774422817965i4qtxz9if",
+    "createdAt": "2026-03-25T07:13:37.965Z",
+    "updatedAt": "2026-03-25T07:13:37.969Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:13:37.962Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_audiobook"
+      }
+    },
+    "_id": "1774422818878is5kuahpl",
+    "createdAt": "2026-03-25T07:13:38.878Z",
+    "updatedAt": "2026-03-25T07:13:38.882Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_audiobook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
+        "purchasedAt": "2026-03-25T07:13:38.869Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook"
+      }
+    },
+    "_id": "1774422973060mbfqxg2nv",
+    "createdAt": "2026-03-25T07:16:13.060Z",
+    "updatedAt": "2026-03-25T07:16:13.071Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:16:13.054Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v1_audiobook_en"
+      }
+    },
+    "_id": "1774422973976tjv0v6c52",
+    "createdAt": "2026-03-25T07:16:13.976Z",
+    "updatedAt": "2026-03-25T07:16:13.987Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:16:13.973Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_audiobook"
+      }
+    },
+    "_id": "17744229750886ekx95jx4",
+    "createdAt": "2026-03-25T07:16:15.088Z",
+    "updatedAt": "2026-03-25T07:16:15.095Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_audiobook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
+        "purchasedAt": "2026-03-25T07:16:15.082Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_ebook"
+      }
+    },
+    "_id": "1774422975911fkf4hu0ry",
+    "createdAt": "2026-03-25T07:16:15.911Z",
+    "updatedAt": "2026-03-25T07:16:15.920Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_ebook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "E-Book",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411240159-635425919.pdf",
+        "purchasedAt": "2026-03-25T07:16:15.909Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_ebook_en"
+      }
+    },
+    "_id": "1774422977252fjlof71se",
+    "createdAt": "2026-03-25T07:16:17.252Z",
+    "updatedAt": "2026-03-25T07:16:17.258Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_ebook_en",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "E-Book",
+        "thumbnail": "img/vol 2.png",
+        "purchasedAt": "2026-03-25T07:16:17.248Z",
+        "accessStatus": "active"
+      }
+    }
+  },
+  {
+    "$or": [
+      {
+        "userId": "admin-efv-001"
+      },
+      {
+        "userId": "admin-efv-001"
+      }
+    ],
+    "$setOnInsert": {
+      "userId": "admin-efv-001"
+    },
+    "$pull": {
+      "items": {
+        "productId": "efv_v2_audiobook_en"
+      }
+    },
+    "_id": "17744229778388reh2wxd4",
+    "createdAt": "2026-03-25T07:16:17.838Z",
+    "updatedAt": "2026-03-25T07:16:17.846Z",
+    "$push": {
+      "items": {
+        "productId": "efv_v2_audiobook_en",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "purchasedAt": "2026-03-25T07:16:17.836Z",
+        "accessStatus": "active"
+      }
+    }
   }
 ]
