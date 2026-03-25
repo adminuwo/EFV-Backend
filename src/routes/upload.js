@@ -106,7 +106,71 @@ const uploadFileToGCS = async (localFilePath, originalname, fieldname) => {
     return `https://storage.googleapis.com/${bucketName}/${gcsFileName}`;
 };
 
-// Upload route
+// --- CHUNKED UPLOAD ENGINE (Bypasses Cloud Run 32MB Limits) ---
+router.post('/chunked', adminAuth, upload.single('chunk'), async (req, res) => {
+    try {
+        const { fileId, chunkIndex, totalChunks, fieldname, originalname } = req.body;
+        const chunkFile = req.file;
+
+        if (!chunkFile) return res.status(400).json({ message: 'No chunk file provided' });
+
+        const safeFileId = fileId.replace(/[^a-z0-9]/gi, '_');
+        const tempDir = path.join('/tmp', 'efv_chunks', safeFileId);
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+        const chunkPath = path.join(tempDir, `chunk_${chunkIndex}`);
+        fs.renameSync(chunkFile.path, chunkPath);
+
+        const chunks = fs.readdirSync(tempDir);
+        if (chunks.length === parseInt(totalChunks)) {
+            // All chunks arrived, assemble
+            const safeName = originalname.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const finalSafeName = `${fieldname}-${uniqueSuffix}-${safeName}`;
+            const finalPath = path.join('/tmp', finalSafeName);
+            
+            const writeStream = fs.createWriteStream(finalPath);
+            for (let i = 0; i < parseInt(totalChunks); i++) {
+                const cPath = path.join(tempDir, `chunk_${i}`);
+                if (fs.existsSync(cPath)) writeStream.write(fs.readFileSync(cPath));
+            }
+            writeStream.end();
+            await new Promise(resolve => writeStream.on('finish', resolve));
+
+            // Clean up chunks
+            fs.rmSync(tempDir, { recursive: true, force: true });
+
+            // Upload to final place
+            let storagePath = '';
+            let localRelPath = '';
+            if (fieldname === 'cover') localRelPath = `src/uploads/covers/${finalSafeName}`;
+            else if (fieldname === 'ebook') localRelPath = `src/uploads/ebooks/${finalSafeName}`;
+            else if (fieldname === 'gallery') localRelPath = `src/uploads/gallery/${finalSafeName}`;
+            else localRelPath = `src/uploads/audios/${finalSafeName}`;
+
+            if (useGCS) {
+                console.log(`☁️ [Chunked] Uploading Ascembled File to GCS: ${finalSafeName}`);
+                try {
+                    storagePath = await uploadFileToGCS(finalPath, originalname, fieldname);
+                } catch(err) {
+                    console.error('❌ GCS Upload Failed for Chunked File:', err);
+                    storagePath = localRelPath; // local fallback
+                }
+            } else {
+                storagePath = localRelPath;
+            }
+
+            return res.json({ completed: true, storagePath, fieldname });
+        }
+
+        res.json({ completed: false, chunkIndex });
+    } catch (err) {
+        console.error('❌ Chunked Upload Error:', err);
+        res.status(500).json({ message: 'Chunk processing failed', error: err.message });
+    }
+});
+
+// Default Upload route
 router.post('/', adminAuth, (req, res, next) => {
     res.setHeader('X-Upload-Version', '2.5'); // Version bumped for GCS Native Disk mode
     console.log(`🚀 [v2.5] Upload Request Started (Mode: ${useGCS ? 'GCS Native ☁️' : 'Local 📁'})`);
