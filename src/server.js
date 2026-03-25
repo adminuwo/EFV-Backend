@@ -103,7 +103,7 @@ app.use((req, res, next) => {
 
 app.use(cors({
     origin: (origin, callback) => {
-        // 1. Allow bypass for non-browser clients or same-origin
+        // 1. Allow bypass for non-browser clients (Postman/Curl) or same-origin
         if (!origin) return callback(null, true);
         
         // 2. Exact match check
@@ -112,20 +112,21 @@ app.use(cors({
         // 3. Substring/Domain checks (helpful for dev/production variations)
         const isAllowed = origin.includes('localhost') || 
                          origin.includes('127.0.0.1') || 
-                         origin.endsWith('efvframework.com') ||
-                         origin.includes('asia-south1.run.app'); // Allow the backend to call itself if needed
+                         origin.includes('efvframework.com') ||
+                         origin.includes('asia-south1.run.app');
 
         if (isAllowed) {
             callback(null, true);
         } else {
-            console.warn('Blocked by CORS Policy | Requested Origin:', origin);
+            console.warn(`🚨 [CORS BLOCKED] Rejected Origin: ${origin}`);
             callback(new Error('CORS Access Denied: Origin not whitelisted'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Range'],
-    exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Range', 'X-Upload-Version'],
-    credentials: true
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Range', 'Cache-Control', 'Pragma'],
+    exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Range', 'X-Upload-Version', 'X-Requested-With'],
+    credentials: true,
+    maxAge: 86400 // Preflight cache (24 hours)
 }));
 app.use(express.json());
 
