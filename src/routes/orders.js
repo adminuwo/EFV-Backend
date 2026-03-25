@@ -820,20 +820,32 @@ router.put('/:id/status', adminAuth, async (req, res) => {
                 }
 
                 if (digitalItems.length > 0) {
-                    let library = await DigitalLibrary.findOne({ userId: userId.toString() });
+                    const searchId = (userId || '').toString();
+                    console.log(`📦 [FULFILLMENT] Unlocking ${digitalItems.length} items for ${order.customer.email} (Status change)`);
+
+                    let library = await DigitalLibrary.findOne({ 
+                        $or: [{ userId: userId }, { userId: searchId }]
+                    });
+
                     if (!library) {
-                        library = new DigitalLibrary({ userId: userId.toString(), items: [] });
+                        console.log(`✨ [FULFILLMENT] Creating NEW library record...`);
+                        library = new DigitalLibrary({ userId: userId, items: [] });
                     }
                     if (!library.items) library.items = [];
 
                     digitalItems.forEach(di => {
-                        if (!library.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
+                        const pidStr = di.productId.toString();
+                        const alreadyOwned = library.items.some(li => (li.productId || '').toString() === pidStr);
+                        
+                        if (!alreadyOwned) {
                             library.items.push(di);
+                            console.log(`✅ [FULFILLMENT] Added to Library: ${di.title}`);
                         }
                     });
+
                     library.updatedAt = new Date().toISOString();
                     await library.save();
-                    console.log(`✅ Status Update: Digital items unlocked for ${order.customer.email}`);
+                    console.log(`💾 [FULFILLMENT] Library updated for user ID: ${searchId}`);
                 }
             }
         }
@@ -1594,40 +1606,67 @@ router.post('/verify-razorpay', protect, async (req, res) => {
             }]
         });
 
-        // 7. Unlock Digital Items
+        // 7. Unlock Digital Items (ROBUST FULFILLMENT)
         const digitalItems = [];
         for (const item of orderItems) {
-            if (item.type === 'EBOOK' || item.type === 'AUDIOBOOK') {
-                const product = await Product.findById(item.productId);
+            const iType = (item.type || '').toUpperCase();
+            if (iType === 'EBOOK' || iType === 'AUDIOBOOK') {
+                console.log(`🔑 [UNLOCK] Processing Digital Item: ${item.title} (${item.productId})`);
+                
+                let product = await Product.findById(item.productId);
+                if (!product) {
+                    // Fallback to title matching if ID is different (common in seed data)
+                    const cleanTitle = (item.title || '').replace(/\(.*\)/, '').replace(/[™®]/g, '').trim();
+                    product = await Product.findOne({ title: new RegExp(cleanTitle, 'i') });
+                }
+
                 if (product) {
                     digitalItems.push({
                         productId   : product._id,
                         title       : product.title,
-                        type        : product.type === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
+                        type        : (product.type || 'EBOOK').toUpperCase() === 'AUDIOBOOK' ? 'Audiobook' : 'E-Book',
                         thumbnail   : product.thumbnail,
                         filePath    : product.filePath,
                         purchasedAt : new Date(),
                         orderId     : newOrder.orderId,
                         accessStatus: 'active'
                     });
+                } else {
+                    console.warn(`⚠️ [UNLOCK] Product not found in marketplace for: ${item.title}`);
                 }
             }
         }
 
         if (digitalItems.length > 0) {
-            let library = await DigitalLibrary.findOne({ userId: user._id.toString() });
+            // Standardize UserID lookup (support both ObjectId and String)
+            const resolvedUserId = user._id || user.id;
+            const searchId = (resolvedUserId || '').toString();
+            
+            console.log(`📦 [UNLOCK] Unlocking ${digitalItems.length} items for ${user.email} (UserID: ${searchId})`);
+
+            let library = await DigitalLibrary.findOne({ 
+                $or: [{ userId: resolvedUserId }, { userId: searchId }]
+            });
+
             if (!library) {
-                library = new DigitalLibrary({ userId: user._id.toString(), items: [] });
+                console.log(`✨ [UNLOCK] Creating NEW library record for ${user.email}...`);
+                library = new DigitalLibrary({ userId: resolvedUserId, items: [] });
             }
             if (!library.items) library.items = [];
 
             digitalItems.forEach(di => {
-                if (!library.items.some(li => (li.productId || '').toString() === di.productId.toString())) {
+                const pidStr = di.productId.toString();
+                const alreadyOwned = library.items.some(li => (li.productId || '').toString() === pidStr);
+                
+                if (!alreadyOwned) {
                     library.items.push(di);
+                    console.log(`✅ [UNLOCK] Added to Library: ${di.title}`);
                 }
             });
+
             library.updatedAt = new Date().toISOString();
             await library.save();
+            console.log(`💾 [UNLOCK] Successfully saved library for ${user.email}`);
         }
 
         // 8. Notification

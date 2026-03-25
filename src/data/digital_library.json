@@ -2061,5 +2061,47 @@
         "accessStatus": "active"
       }
     }
+  },
+  {
+    "userId": "admin-efv-001",
+    "items": [
+      {
+        "productId": "efv_v2_audiobook_en",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "purchasedAt": "2026-03-25T07:29:35.058Z",
+        "accessStatus": "active"
+      },
+      {
+        "productId": "efv_v1_audiobook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "uploads/audios/chapter_0-1772336833096-347131271-chp_1_vol_1.m4a",
+        "purchasedAt": "2026-03-25T07:39:02.317Z",
+        "accessStatus": "active"
+      },
+      {
+        "productId": "efv_v1_audiobook_en",
+        "title": "EFV™ VOL 1: THE ORIGIN CODE™",
+        "type": "Audiobook",
+        "thumbnail": "img/english_v1.jpeg",
+        "purchasedAt": "2026-03-25T07:39:03.753Z",
+        "accessStatus": "active"
+      },
+      {
+        "productId": "efv_v2_audiobook",
+        "title": "EFV™ VOL 2: MINDOS™",
+        "type": "Audiobook",
+        "thumbnail": "img/vol 2.png",
+        "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
+        "purchasedAt": "2026-03-25T07:39:04.385Z",
+        "accessStatus": "active"
+      }
+    ],
+    "_id": "1774423764376gdec7w4d5",
+    "createdAt": "2026-03-25T07:29:24.376Z",
+    "updatedAt": "2026-03-25T07:39:04.391Z"
   }
 ]
