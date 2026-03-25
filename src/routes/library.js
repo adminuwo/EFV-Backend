@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const { User, Purchase, Product, UserProgress, DigitalLibrary } = require('../models');
+const { User, Purchase, Product, UserProgress, DigitalLibrary, Order } = require('../models');
 
 // Helper to get a consistent identifier for userId (supports both ObjectId and custom Strings)
 function getUserObjId(user) {
@@ -192,9 +192,8 @@ router.post('/add', protect, async (req, res) => {
     try {
         const { productId } = req.body;
         const userId = req.user._id;
-        const userEmail = req.user.email;
         
-        console.log(`📥 [LIBRARY ADD] User: ${userEmail} | Product: ${productId}`);
+        console.log(`📥 [LIBRARY ADD] Request received...`);
 
         let product = null;
 
