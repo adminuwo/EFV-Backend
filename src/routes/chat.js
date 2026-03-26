@@ -198,7 +198,13 @@ router.post('/message', async (req, res) => {
             });
 
             // Send message with RAG context if found
-            const finalPrompt = ragContext ? `Using the following context from our knowledge base: ${ragContext}\n\nUser Question: ${message}` : message;
+            const systemInstructions = `You are a marketplace for selling books of efv website
+Answer professionally, clearly, and concisely.
+Reply in the same language as the user input. If Hindi, reply in Hindi. If English, reply in English.`;
+
+            const finalPrompt = ragContext 
+                ? `${systemInstructions}\n\nUsing the following context from our knowledge base: ${ragContext}\n\nUser Question: ${message}` 
+                : `${systemInstructions}\n\nUser Question: ${message}`;
 
             const result = await chat.sendMessage(finalPrompt);
             const response = result.response;
