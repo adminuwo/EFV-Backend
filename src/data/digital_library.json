@@ -2098,10 +2098,22 @@
         "filePath": "ebooks/ebook-1771411253035-753162584.pdf",
         "purchasedAt": "2026-03-25T07:39:04.385Z",
         "accessStatus": "active"
+      },
+      {
+        "productId": "efv_v1_ebook",
+        "title": "EFV™ VOL 1: ORIGIN CODE™",
+        "type": "E-Book",
+        "thumbnail": "img/vol1-cover.png",
+        "filePath": "src/uploads/ebooks/ebook-1774421988784-900261396-efv_invoice_69bd30f6a5cbe4ee109baf5c.pdf",
+        "purchasedAt": "2026-03-31T17:50:46.232Z",
+        "accessStatus": "active"
       }
     ],
     "_id": "1774423764376gdec7w4d5",
     "createdAt": "2026-03-25T07:29:24.376Z",
-    "updatedAt": "2026-03-25T07:39:04.391Z"
+    "updatedAt": "2026-03-31T17:50:46.238Z",
+    "$set": {
+      "items": []
+    }
   }
 ]

@@ -80,7 +80,7 @@ router.post('/', adminAuth, async (req, res) => {
             title, author, price, discountPrice, type, filePath,
             description, thumbnail, gallery, stock, discount,
             category, language, volume, weight, length, breadth, height, duration,
-            totalChapters, chapters
+            totalChapters, chapters, regionalPrices
         } = req.body;
 
         if (!title || !price || !type) {
@@ -100,7 +100,7 @@ router.post('/', adminAuth, async (req, res) => {
             title, author, price, discountPrice, type, filePath,
             description, thumbnail, gallery, stock, discount,
             category, language, volume, weight, length, breadth, height, duration,
-            totalChapters, chapters
+            totalChapters, chapters, regionalPrices
         });
 
         console.log('📝 Created Product to DB:', product._id);
@@ -141,10 +141,63 @@ router.post('/', adminAuth, async (req, res) => {
             }
         }
 
-        /* 
-        // 🔔 Broadcase Notification to ALL users about the new book
+        // 🔔 Broadcast Notification to ALL users about the new book
         try {
-            const { User } = require('../models');
+            const { NotifyRequest, User } = require('../models');
+            const axios = require('axios'); // For internal hit if needed, but we can do it directly
+            
+            // Notification Logic for people who requested to be notified
+            const notifyRequests = await NotifyRequest.find({ bookTitle: title, status: 'Pending' });
+            if (notifyRequests.length > 0) {
+                console.log(`📢 Notifying ${notifyRequests.length} users about "${title}" release...`);
+                // Use internal logic or call the route logic
+                const sendEmail = require('../utils/emailService');
+                for (const nr of notifyRequests) {
+                    try {
+                        await sendEmail({
+                            email: nr.email,
+                            subject: `Available Now: "${title}" - EFV™`,
+                            html: `
+                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #000; color: #fff; border: 1px solid #FFD369; border-radius: 10px;">
+                                    <h2 style="color: #FFD369; text-align: center;">Available Now!</h2>
+                                    <p>Hello,</p>
+                                    <p>Great news! The book you were waiting for, <strong>"${title}"</strong>, is now available in the EFV™ Marketplace.</p>
+                                    <p>You can now browse and purchase it to continue your journey into higher frequencies.</p>
+                                    <div style="text-align: center; margin: 30px 0;">
+                                        <a href="https://efvframework.com/pages/marketplace.html" style="background: #FFD369; color: #000; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Browse Marketplace</a>
+                                    </div>
+                                    <p>Stay tuned for more updates.</p>
+                                    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #333; font-size: 12px; opacity: 0.6; text-align: center;">
+                                        © 2026 EFV™ - Energy, Frequency, Vibration
+                                    </div>
+                                </div>
+                            `
+                        });
+                        
+                        // User in-app notification
+                        const user = await User.findOne({ email: nr.email });
+                        if (user) {
+                            if (!user.notifications) user.notifications = [];
+                            user.notifications.unshift({
+                                _id: 'release-' + Date.now(),
+                                title: 'Book Available Now! 📚',
+                                message: `"${title}" is now live in the marketplace.`,
+                                type: 'General',
+                                link: 'marketplace.html',
+                                isRead: false,
+                                createdAt: new Date().toISOString()
+                            });
+                            await user.save();
+                        }
+                        
+                        nr.status = 'Notified';
+                        await nr.save();
+                    } catch (err) { console.error('Product release notification error:', err.message); }
+                }
+            }
+
+            // General broadcast
+            /*
             const users = await User.find({});
             const notification = {
                 _id: 'new-book-' + Date.now(),
@@ -164,10 +217,10 @@ router.post('/', adminAuth, async (req, res) => {
                 await user.save();
             }
             console.log(`📢 Broadcase new book alert to ${users.length} users.`);
+            */
         } catch (noteErr) {
             console.error('Broadcast notification error:', noteErr);
         }
-        */
 
         res.status(201).json(product);
     } catch (error) {

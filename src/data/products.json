@@ -4,7 +4,7 @@
     "title": "EFV™ VOL 1: ORIGIN CODE™",
     "subtitle": "Hardcover Edition",
     "type": "HARDCOVER",
-    "price": 499,
+    "price": 4,
     "thumbnail": "img/vol1-cover.png",
     "category": "Physical",
     "description": "Learn the secrets of Energy and Alignment. Premium hardcover book.",
@@ -17,7 +17,7 @@
     "length": 15,
     "breadth": 10,
     "height": 2,
-    "updatedAt": "2026-03-23T08:44:26.250Z",
+    "updatedAt": "2026-03-31T15:33:34.242Z",
     "$inc": {
       "stock": -1
     },

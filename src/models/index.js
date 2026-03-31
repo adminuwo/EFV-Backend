@@ -71,6 +71,7 @@ const productSchema = new mongoose.Schema({
     breadth: { type: Number, default: 0 }, // in cm
     height: { type: Number, default: 0 }, // in cm
     duration: String, // e.g. "12:35" for audiobooks
+    regionalPrices: { type: Map, of: Number, default: {} },
 
     // Chapter-Based Audiobook System
     totalChapters: { type: Number, default: 0 },
@@ -392,6 +393,15 @@ const chatConversationSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const notifyRequestSchema = new mongoose.Schema({
+    email: { type: String, required: true },
+    bookTitle: { type: String, required: true },
+    bookId: String,
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ['Pending', 'Notified'], default: 'Pending' },
+    createdAt: { type: Date, default: Date.now }
+});
+
 module.exports = {
     User: mongoose.model('User', userSchema),
     Product: mongoose.model('Product', productSchema),
@@ -414,5 +424,6 @@ module.exports = {
     ChatConversation: mongoose.model('ChatConversation', chatConversationSchema),
     NotificationJob: mongoose.model('NotificationJob', notificationJobSchema),
     SystemSettings: mongoose.model('SystemSettings', systemSettingsSchema),
+    NotifyRequest: mongoose.model('NotifyRequest', notifyRequestSchema),
     NotificationLog: require('./NotificationLog')
 };

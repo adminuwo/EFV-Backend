@@ -198,6 +198,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/images', require('./routes/images'));
 app.use('/api/rag', require('./routes/rag'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Initial Seed (if DB empty)
 setTimeout(() => {

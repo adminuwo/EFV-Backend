@@ -54,6 +54,14 @@
     "phone": "",
     "notifications": [
       {
+        "_id": "notify-1774979664044",
+        "title": "Alignment Confirmed! 🔔",
+        "message": "You will be notified when \"MINDOS\" is available.",
+        "type": "General",
+        "isRead": false,
+        "createdAt": "2026-03-31T17:54:24.045Z"
+      },
+      {
         "_id": "welcome-1772781381562",
         "type": "Digital",
         "title": "Welcome to EFV, Super Admin! 🚀",
@@ -63,7 +71,7 @@
       }
     ],
     "createdAt": "2026-03-06T07:13:56.710Z",
-    "updatedAt": "2026-03-06T07:16:21.566Z"
+    "updatedAt": "2026-03-31T17:54:24.049Z"
   },
   {
     "name": "Abha Jatav",
@@ -73,6 +81,32 @@
     "googleId": "111911412541868089648",
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLiXBZDTWo-vgHkHRlbgCn_bHuivQ7wnyjH9t1O903oQ_gF5Q=s96-c",
     "notifications": [
+      {
+        "_id": "release-1774977585001",
+        "title": "Book Available! 📚",
+        "message": "\"MINDOS\" is now live in the marketplace.",
+        "type": "General",
+        "link": "marketplace.html",
+        "isRead": false,
+        "createdAt": "2026-03-31T17:19:45.001Z"
+      },
+      {
+        "_id": "notify-1774976461592",
+        "title": "Alignment Confirmed! 🔔",
+        "message": "You will be notified when \"MINDOS\" is available.",
+        "type": "General",
+        "isRead": false,
+        "createdAt": "2026-03-31T17:01:01.592Z"
+      },
+      {
+        "_id": "reply-1774971616195",
+        "title": "New Support Reply",
+        "message": "Admin replied to your ticket: \"feedback \"",
+        "type": "General",
+        "link": "profile.html?tab=support",
+        "isRead": false,
+        "createdAt": "2026-03-31T15:40:16.196Z"
+      },
       {
         "_id": "purchase-cod-1774256304548",
         "title": "COD Order Confirmed! 📦",
@@ -119,12 +153,13 @@
         "title": "Order Cancelled",
         "message": "Your order #EFV-1774255466179493 has been cancelled. Refund (if applicable) will be processed within 5–7 business days.",
         "type": "Order",
-        "isRead": false
+        "isRead": false,
+        "_id": "note-1774971355625-dhvc0"
       }
     ],
     "_id": "mmeunvhwo82twuyusc",
     "createdAt": "2026-03-06T12:07:30.356Z",
-    "updatedAt": "2026-03-23T08:58:24.548Z",
+    "updatedAt": "2026-03-31T17:19:45.002Z",
     "savedAddresses": [
       {
         "id": "addr_mn2xue67lft4g",

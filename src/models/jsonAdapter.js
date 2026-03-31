@@ -269,5 +269,6 @@ module.exports = {
     ChatConversation: JsonModel.createModel('chat_conversations.json'),
     Job: JsonModel.createModel('jobs.json'),
     NotificationLog: JsonModel.createModel('notification_logs.json'),
-    SystemSettings: JsonModel.createModel('system_settings.json')
+    SystemSettings: JsonModel.createModel('system_settings.json'),
+    NotifyRequest: JsonModel.createModel('notify_requests.json')
 };
