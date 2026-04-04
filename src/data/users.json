@@ -37,13 +37,28 @@
     ],
     "_id": "aditi_local_test",
     "createdAt": "2026-03-06T13:40:00.000Z",
-    "updatedAt": "2026-03-23T06:09:46.911Z",
+    "updatedAt": "2026-04-04T07:32:04.278Z",
     "purchasedProducts": [
       "efv_v1_audiobook"
     ],
     "_lastDeleteStatus": "SUCCESS",
     "googleId": "106031515199377928283",
-    "savedAddresses": []
+    "savedAddresses": [
+      {
+        "id": "addr_mnk0ld27r94fp",
+        "fullName": "Aditi",
+        "phone": "7694045090",
+        "pincode": "482001",
+        "state": "M.P",
+        "city": "Jabalpur",
+        "house": "107",
+        "area": "police line",
+        "landmark": "",
+        "type": "Home",
+        "isDefault": true,
+        "createdAt": "2026-04-04T07:32:04.063Z"
+      }
+    ]
   },
   {
     "_id": "admin-efv-001",
