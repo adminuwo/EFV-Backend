@@ -44,7 +44,7 @@ const createCashfreeOrder = async (orderData) => {
         const request = {
             "order_id": orderData.orderId,
             "order_amount": Number(orderData.amount),
-            "order_currency": "INR",
+            "order_currency": orderData.currency || "INR",
             "customer_details": {
                 "customer_id": orderData.customerId,
                 "customer_phone": phone,
