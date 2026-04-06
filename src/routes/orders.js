@@ -13,7 +13,7 @@ const jobService = require('../services/jobService');
 
 // Get current user's orders
 router.get('/my-orders', protect, async (req, res) => {
-    try {
+    try { 
         const query = {
             $or: [
                 { userId: req.user._id },
@@ -266,7 +266,7 @@ router.post('/cashfree', protect, async (req, res) => {
         const cfOrder = await createCashfreeOrder({
             orderId: orderId,
             amount: Number(roundedAmount),
-            currency: currency || 'INR',
+            currency: currency || 'INR', // Accepting USD or INR from frontend
             customerId: req.user._id.toString(),
             customerName: customerName || req.user.name,
             customerPhone: customerPhone || req.user.phone || '0000000000',
@@ -286,7 +286,7 @@ router.post('/cashfree', protect, async (req, res) => {
 // Verify Cashfree Payment
 router.post('/verify-cashfree', protect, async (req, res) => {
     try {
-        const { order_id, checkoutData, customer: directCustomer, items: directItems, couponCode } = req.body;
+        const { order_id, currency, checkoutData, customer: directCustomer, items: directItems, couponCode } = req.body;
 
         if (!order_id) return res.status(400).json({ message: 'Order ID is required' });
 
@@ -427,9 +427,10 @@ router.post('/verify-cashfree', protect, async (req, res) => {
             status: isPurelyDigital ? 'Completed (Digital)' : 'Processing',
             orderType: isPurelyDigital ? 'digital' : 'physical',
             cashfreeOrderId: order_id,
+            currency: currency || 'INR', // Store the currency used for payment
             timeline: [{
                 status: isPurelyDigital ? 'Completed (Digital)' : 'Paid',
-                note: isPurelyDigital ? 'Digital Product Purchased & Unlocked' : 'Payment verified via Cashfree'
+                note: isPurelyDigital ? 'Digital Product Purchased & Unlocked' : `Payment verified via Cashfree (${currency || 'INR'})`
             }]
         });
 
