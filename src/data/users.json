@@ -241,5 +241,42 @@
     "_id": "mmly2bj8idk4qa58wb",
     "createdAt": "2026-03-11T11:17:06.404Z",
     "updatedAt": "2026-03-11T11:17:06.404Z"
+  },
+  {
+    "name": "Aditi Lakhera",
+    "email": "aditilakhera0@gmail.com",
+    "password": "$2a$10$NwIpCLhQCDf2UBPAf1mPk.mY468Anv.hmg9NOpU9OyBaKfWms60.S",
+    "role": "user",
+    "googleId": "108717287369568964264",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIrgDqUbjUlMgMhvPy_d2buZCGZ85LPgRa0r84TkYGjAWOFMA=s96-c",
+    "notifications": [
+      {
+        "type": "Digital",
+        "title": "Welcome, Aditi Lakhera! 🚀",
+        "message": "You've successfully connected with Google. Explore your secure library.",
+        "isRead": false,
+        "createdAt": "2026-04-09T11:35:18.352Z",
+        "_id": "note-1775734657049-106sn"
+      }
+    ],
+    "_id": "1775734518376hxlpc7hky",
+    "createdAt": "2026-04-09T11:35:18.376Z",
+    "updatedAt": "2026-04-09T11:38:24.105Z",
+    "savedAddresses": [
+      {
+        "id": "addr_mnreleo63b24u",
+        "fullName": "Abha",
+        "phone": "8982882237",
+        "pincode": "482001",
+        "state": "Madhya Pradesh",
+        "city": "Jabalpur",
+        "house": "22",
+        "area": "Paintinaka Sadar",
+        "landmark": "",
+        "type": "Home",
+        "isDefault": true,
+        "createdAt": "2026-04-09T11:38:24.006Z"
+      }
+    ]
   }
 ]
