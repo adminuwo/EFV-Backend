@@ -27,7 +27,7 @@ const createCashfreeOrder = async (orderData) => {
             ? orderData.customerPhone
             : '9999999999';
 
-        let returnUrl = orderData.returnUrl || `${process.env.FRONTEND_URL}/payment-status.html?order_id={order_id}`;
+        let returnUrl = orderData.returnUrl || `${process.env.FRONTEND_URL}/pages/payment-status.html?order_id={order_id}`;
         let notifyUrl = orderData.notifyUrl || `${process.env.BACKEND_URL}/api/orders/cashfree-notify`;
 
         // 🔥 CRITICAL: Cashfree Production Mode strictly requires HTTPS return_url and notify_url
