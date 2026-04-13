@@ -170,10 +170,63 @@ class JsonModel {
                 const run = async () => {
                     let item = await this.findOne(query);
                     if (item) {
-                        const result = await db.update(item._id || item.id, updatesOrFn);
+                        // Apply Mongoose-style operators if present
+                        let finalUpdates = updatesOrFn;
+                        if (typeof updatesOrFn === 'object' && updatesOrFn !== null) {
+                            const hasOperators = Object.keys(updatesOrFn).some(k => k.startsWith('$'));
+                            if (hasOperators) {
+                                finalUpdates = { ...item };
+                                if (updatesOrFn.$set) Object.assign(finalUpdates, updatesOrFn.$set);
+                                if (updatesOrFn.$setOnInsert) { /* Ignore for update */ }
+                                if (updatesOrFn.$push) {
+                                    for (let [key, val] of Object.entries(updatesOrFn.$push)) {
+                                        if (!Array.isArray(finalUpdates[key])) finalUpdates[key] = [];
+                                        finalUpdates[key].push(val);
+                                    }
+                                }
+                                if (updatesOrFn.$pull) {
+                                    for (let [key, val] of Object.entries(updatesOrFn.$pull)) {
+                                        if (Array.isArray(finalUpdates[key])) {
+                                            // Simple equality check for pull
+                                            finalUpdates[key] = finalUpdates[key].filter(i => {
+                                                if (typeof val === 'object' && val !== null) {
+                                                    return !Object.entries(val).every(([vk, vv]) => i[vk] == vv);
+                                                }
+                                                return i != val;
+                                            });
+                                        }
+                                    }
+                                }
+                                // Remove operator keys just in case
+                                delete finalUpdates.$set;
+                                delete finalUpdates.$push;
+                                delete finalUpdates.$pull;
+                                delete finalUpdates.$setOnInsert;
+                                delete finalUpdates.$inc;
+                            }
+                        }
+
+                        const result = await db.update(item._id || item.id, finalUpdates);
                         return JsonModel._attachSave(result, db);
                     } else if (options.upsert) {
-                        const data = typeof updatesOrFn === 'function' ? updatesOrFn(query) : { ...query, ...updatesOrFn };
+                        let data = {};
+                        // Merge query (avoiding operators in query)
+                        Object.entries(query).forEach(([k, v]) => {
+                            if (!k.startsWith('$')) data[k] = v;
+                        });
+
+                        if (typeof updatesOrFn === 'object' && updatesOrFn !== null) {
+                            if (updatesOrFn.$set) Object.assign(data, updatesOrFn.$set);
+                            if (updatesOrFn.$setOnInsert) Object.assign(data, updatesOrFn.$setOnInsert);
+                            if (updatesOrFn.$push) {
+                                for (let [key, val] of Object.entries(updatesOrFn.$push)) {
+                                    data[key] = [val];
+                                }
+                            }
+                        } else {
+                            Object.assign(data, updatesOrFn);
+                        }
+                        
                         return await this.create(data);
                     }
                     return null;
